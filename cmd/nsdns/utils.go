@@ -14,7 +14,6 @@ import (
 )
 
 import (
-	// "github.com/Eagerod/kube-namesilo-dns/pkg/icanhazip"
 	"github.com/Eagerod/kube-namesilo-dns/pkg/namesilo_api"
 	"github.com/Eagerod/kube-namesilo-dns/pkg/nsdns"
 )
