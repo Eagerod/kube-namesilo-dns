@@ -24,12 +24,16 @@ func updateCommand() *cobra.Command {
 		Use:   "update",
 		Short: "update dns records",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			nsApiKey := os.Getenv("NAMESILO_API_KEY")
-			api := namesilo_api.NewNamesiloApi(nsApiKey)
-
 			if domainName == "" {
 				return fmt.Errorf("Must provide a domain name to update DNS records.")
 			}
+
+			nsApiKey := os.Getenv("NAMESILO_API_KEY")
+			if nsApiKey == "" {
+				return fmt.Errorf("Failed to find NAMESILO_API_KEY in environment. Cannot proceed.")
+			}
+
+			api := namesilo_api.NewNamesiloApi(nsApiKey)
 
 			records, err := api.ListDNSRecords(domainName)
 			if err != nil {
