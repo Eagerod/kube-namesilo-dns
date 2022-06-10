@@ -18,6 +18,12 @@ import (
 	"github.com/Eagerod/kube-namesilo-dns/pkg/nsdns"
 )
 
+type RecordReconciliation struct {
+	Add    []namesilo_api.ResourceRecord
+	Update []namesilo_api.ResourceRecord
+	NoOp   []namesilo_api.ResourceRecord
+}
+
 func GetResourcesFromKubernetesIngresses(domainName, ip string) ([]namesilo_api.ResourceRecord, error) {
 	rv := []namesilo_api.ResourceRecord{}
 
@@ -54,4 +60,35 @@ func GetResourcesFromKubernetesIngresses(domainName, ip string) ([]namesilo_api.
 	}
 
 	return rv, nil
+}
+
+func ReconcileRecords(existing, new []namesilo_api.ResourceRecord) RecordReconciliation {
+	rr := RecordReconciliation{}
+
+	existingByHost := map[string]namesilo_api.ResourceRecord{}
+	for _, res := range existing {
+		existingByHost[res.Host] = res
+	}
+
+	for _, res := range new {
+		if r, ok := existingByHost[res.Host]; ok {
+			if RecordRequiresReconciliation(r, res) {
+				rr.NoOp = append(rr.NoOp, res)
+			} else {
+				rr.Update = append(rr.Update, res)
+			}
+		} else {
+			rr.Add = append(rr.Add, res)
+		}
+	}
+
+	return rr
+}
+
+func RecordRequiresReconciliation(existing, new namesilo_api.ResourceRecord) bool {
+	return existing.Type == new.Type &&
+		existing.Host == new.Host &&
+		existing.Value == new.Value &&
+		existing.TTL == new.TTL &&
+		existing.Distance == new.Distance
 }

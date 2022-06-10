@@ -40,12 +40,31 @@ func updateCommand() *cobra.Command {
 				return err
 			}
 
+			log.Debugf("Received %d records from Namesilo", len(records))
+
 			ip, err := icanhazip.GetPublicIP()
 			if err != nil {
 				return err
 			}
 
-			for _, record := range records {
+			ingressRecords, err := GetResourcesFromKubernetesIngresses(domainName, ip)
+			if err != nil {
+				return err
+			}
+
+			log.Debugf("Received %d records from Ingress objects", len(ingressRecords))
+
+			rr := ReconcileRecords(records, ingressRecords)
+
+			for _, r := range rr.NoOp {
+				log.Infof("Skipping %s because it's already up to date.", r.Host)
+			}
+
+			for _, r := range rr.Add {
+				log.Infof("Skipping %s because addition hasn't been implemented.", r)
+			}
+
+			for _, record := range rr.Update {
 				switch record.Type {
 				case "A":
 					if err := updateARecord(api, record, domainName, ip); err != nil {
