@@ -18,7 +18,7 @@ import (
 	"github.com/Eagerod/kube-namesilo-dns/pkg/nsdns"
 )
 
-func GetResourcesFromKubernetesIngresses(domainName string) ([]namesilo_api.ResourceRecord, error) {
+func GetResourcesFromKubernetesIngresses(domainName, ip string) ([]namesilo_api.ResourceRecord, error) {
 	rv := []namesilo_api.ResourceRecord{}
 
 	home := homedir.HomeDir()
@@ -45,7 +45,7 @@ func GetResourcesFromKubernetesIngresses(domainName string) ([]namesilo_api.Reso
 			continue
 		}
 
-		nsrr, err := nsdns.NamesiloRecordFromIngress(&item, domainName)
+		nsrr, err := nsdns.NamesiloRecordFromIngress(&item, domainName, ip)
 		if err != nil {
 			return rv, err
 		}
