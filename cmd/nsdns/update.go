@@ -48,26 +48,12 @@ func updateCommand() *cobra.Command {
 			for _, record := range records {
 				switch record.Type {
 				case "A":
-					if record.Value == ip {
-						log.Infof("Skipping A record %s because it's already set correctly\n", record.Host)
-					} else {
-						if err := api.UpdateDNSRecord(domainName, "", record.RecordId, ip, 7207); err != nil {
-							return err
-						}
-
-						log.Infof("Updated %s record %s to %s", record.Type, record.RecordId, ip)
+					if err := updateARecord(api, record, domainName, ip); err != nil {
+						return err
 					}
 				case "CNAME":
-					if record.Value == domainName {
-						log.Infof("Skipping CNAME record %s because it's already set correctly\n", record.Host)
-					} else {
-						domainSuffix := fmt.Sprintf(".%s", domainName)
-						subdomain := strings.TrimSuffix(record.Host, domainSuffix)
-						if err := api.UpdateDNSRecord(domainName, subdomain, record.RecordId, domainName, 7207); err != nil {
-							return err
-						}
-
-						log.Infof("Updated %s record %s to %s", record.Type, record.RecordId, domainName)
+					if err := updateCnameRecord(api, record, domainName); err != nil {
+						return err
 					}
 				default:
 					log.Infof("Can't handle record of type \"%s\"\n", record.Type)
@@ -81,4 +67,34 @@ func updateCommand() *cobra.Command {
 	updateCmd.Flags().StringVarP(&ingressClass, "ingress-class", "i", "", "ingress class to use for public DNS records")
 	updateCmd.Flags().StringVarP(&domainName, "domain", "d", "", "domain name for API calls")
 	return updateCmd
+}
+
+func updateARecord(api *namesilo_api.NamesiloApi, record namesilo_api.ResourceRecord, domainName, ip string) error {
+	if record.Value == ip {
+		log.Infof("Skipping A record %s because it's already set correctly\n", record.Host)
+	} else {
+		if err := api.UpdateDNSRecord(domainName, "", record.RecordId, ip, 7207); err != nil {
+			return err
+		}
+
+		log.Infof("Updated %s record %s to %s", record.Type, record.RecordId, ip)
+	}
+
+	return nil
+}
+
+func updateCnameRecord(api *namesilo_api.NamesiloApi, record namesilo_api.ResourceRecord, domainName string) error {
+	if record.Value == domainName {
+		log.Infof("Skipping CNAME record %s because it's already set correctly\n", record.Host)
+	} else {
+		domainSuffix := fmt.Sprintf(".%s", domainName)
+		subdomain := strings.TrimSuffix(record.Host, domainSuffix)
+		if err := api.UpdateDNSRecord(domainName, subdomain, record.RecordId, domainName, 7207); err != nil {
+			return err
+		}
+
+		log.Infof("Updated %s record %s to %s", record.Type, record.RecordId, domainName)
+	}
+
+	return nil
 }
