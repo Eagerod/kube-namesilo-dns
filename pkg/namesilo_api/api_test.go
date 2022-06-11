@@ -35,8 +35,8 @@ func TestListDNSRecord(t *testing.T) {
 	}))
 	defer server.Close()
 
-	api := NewNamesiloApiWithServer("api-key", server.URL)
-	rr, err := api.ListDNSRecords("example.com")
+	api := NewNamesiloApiWithServer("example.com", "api-key", server.URL)
+	rr, err := api.ListDNSRecords()
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedCalls, calls)
@@ -71,8 +71,8 @@ func TestUpdateDNSRecord(t *testing.T) {
 	}))
 	defer server.Close()
 
-	api := NewNamesiloApiWithServer("api-key", server.URL)
-	err := api.UpdateDNSRecord("example.com", "sub", "abc123", "192.168.1.1", 1234)
+	api := NewNamesiloApiWithServer("example.com", "api-key", server.URL)
+	err := api.UpdateDNSRecord("sub", "abc123", "192.168.1.1", 1234)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedCalls, calls)
@@ -106,8 +106,8 @@ func TestAddDNSRecord(t *testing.T) {
 	}))
 	defer server.Close()
 
-	api := NewNamesiloApiWithServer("api-key", server.URL)
-	err := api.AddDNSRecord("example.com", "A", "sub", "192.168.1.1", 1234)
+	api := NewNamesiloApiWithServer("example.com", "api-key", server.URL)
+	err := api.AddDNSRecord("A", "sub", "192.168.1.1", 1234)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedCalls, calls)

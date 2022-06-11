@@ -33,9 +33,9 @@ func updateCommand() *cobra.Command {
 				return fmt.Errorf("Failed to find NAMESILO_API_KEY in environment. Cannot proceed.")
 			}
 
-			api := namesilo_api.NewNamesiloApi(nsApiKey)
+			api := namesilo_api.NewNamesiloApi(domainName, nsApiKey)
 
-			records, err := api.ListDNSRecords(domainName)
+			records, err := api.ListDNSRecords()
 			if err != nil {
 				return err
 			}

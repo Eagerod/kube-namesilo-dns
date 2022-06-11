@@ -14,6 +14,7 @@ const DefaultApiURLPrefix string = "https://www.namesilo.com/api/"
 type NamesiloApi struct {
 	apiKey    string
 	apiPrefix string
+	domain    string
 }
 
 type ResourceRecord struct {
@@ -45,25 +46,24 @@ type DNSAddRecordsResponse struct {
 
 type DNSUpdateRecordsResponse DNSAddRecordsResponse
 
-func NewNamesiloApi(apiKey string) *NamesiloApi {
+func NewNamesiloApi(domain, apiKey string) *NamesiloApi {
 	return &NamesiloApi{
 		apiKey:    apiKey,
 		apiPrefix: DefaultApiURLPrefix,
+		domain:    domain,
 	}
 }
 
-func NewNamesiloApiWithServer(apiKey, apiPrefix string) *NamesiloApi {
+func NewNamesiloApiWithServer(domain, apiKey, apiPrefix string) *NamesiloApi {
 	return &NamesiloApi{
 		apiKey:    apiKey,
 		apiPrefix: apiPrefix,
+		domain:    domain,
 	}
 }
 
-func (ns *NamesiloApi) ListDNSRecords(domain string) ([]ResourceRecord, error) {
+func (ns *NamesiloApi) ListDNSRecords() ([]ResourceRecord, error) {
 	reqValues := url.Values{}
-
-	reqValues.Add("domain", domain)
-
 	reqUrl, err := ns.apiActionWithValues("dnsListRecords", &reqValues)
 	if err != nil {
 		return nil, err
@@ -82,7 +82,6 @@ func (ns *NamesiloApi) ListDNSRecords(domain string) ([]ResourceRecord, error) {
 func (ns *NamesiloApi) UpdateDNSRecord(domain, host, id, value string, ttl int) error {
 	reqValues := url.Values{}
 
-	reqValues.Add("domain", domain)
 	reqValues.Add("rrid", id)
 	reqValues.Add("rrhost", host)
 	reqValues.Add("rrvalue", value)
@@ -106,7 +105,6 @@ func (ns *NamesiloApi) UpdateDNSRecord(domain, host, id, value string, ttl int) 
 func (ns *NamesiloApi) AddDNSRecord(domain, domainType, host, value string, ttl int) error {
 	reqValues := url.Values{}
 
-	reqValues.Add("domain", domain)
 	reqValues.Add("rrtype", domainType)
 	reqValues.Add("rrhost", host)
 	reqValues.Add("rrvalue", domain)
@@ -139,6 +137,7 @@ func (ns *NamesiloApi) apiActionWithValues(action string, values *url.Values) (*
 	newValues.Add("version", "1")
 	newValues.Add("type", "xml")
 	newValues.Add("key", ns.apiKey)
+	newValues.Add("domain", ns.domain)
 
 	reqUrl.RawQuery = newValues.Encode()
 
