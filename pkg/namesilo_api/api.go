@@ -69,26 +69,14 @@ func (ns *NamesiloApi) ListDNSRecords(domain string) ([]ResourceRecord, error) {
 		return nil, err
 	}
 
-	response, err := http.Get(reqUrl.String())
-	if err != nil {
-		return nil, err
-	}
-
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
-	}
-
 	var ldrr ListDNSRecordsResponse
-	if err := xml.Unmarshal(body, &ldrr); err != nil {
+	if err := request(reqUrl, &ldrr); err != nil {
 		return nil, err
+	} else if ldrr.Reply.Detail != "success" {
+		return nil, fmt.Errorf("namesilo domain list failed with: %s", ldrr.Reply.Detail)
 	}
 
-	if ldrr.Reply.Detail == "success" {
-		return ldrr.Reply.ResourceRecords, nil
-	}
-
-	return nil, fmt.Errorf("namesilo domain list failed with: %s", ldrr.Reply.Detail)
+	return ldrr.Reply.ResourceRecords, nil
 }
 
 func (ns *NamesiloApi) UpdateDNSRecord(domain, host, id, value string, ttl int) error {
@@ -105,26 +93,14 @@ func (ns *NamesiloApi) UpdateDNSRecord(domain, host, id, value string, ttl int) 
 		return err
 	}
 
-	response, err := http.Get(reqUrl.String())
-	if err != nil {
-		return err
-	}
-
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return err
-	}
-
 	var durr DNSUpdateRecordsResponse
-	if err := xml.Unmarshal(body, &durr); err != nil {
+	if err := request(reqUrl, &durr); err != nil {
 		return err
+	} else if durr.Reply.Detail != "success" {
+		return fmt.Errorf("namesilo domain update failed with: %s", durr.Reply.Detail)
 	}
 
-	if durr.Reply.Detail == "success" {
-		return nil
-	}
-
-	return fmt.Errorf("namesilo domain update failed with: %s", durr.Reply.Detail)
+	return nil
 }
 
 func (ns *NamesiloApi) AddDNSRecord(domain, domainType, host, value string, ttl int) error {
@@ -142,26 +118,14 @@ func (ns *NamesiloApi) AddDNSRecord(domain, domainType, host, value string, ttl 
 		return err
 	}
 
-	response, err := http.Get(reqUrl.String())
-	if err != nil {
+	var darr DNSAddRecordsResponse
+	if err := request(reqUrl, &darr); err != nil {
 		return err
+	} else if darr.Reply.Detail != "success" {
+		return fmt.Errorf("namesilo domain add failed with: %s", darr.Reply.Detail)
 	}
 
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return err
-	}
-
-	var durr DNSAddRecordsResponse
-	if err := xml.Unmarshal(body, &durr); err != nil {
-		return err
-	}
-
-	if durr.Reply.Detail == "success" {
-		return nil
-	}
-
-	return fmt.Errorf("namesilo domain add failed with: %s", durr.Reply.Detail)
+	return nil
 }
 
 func (ns *NamesiloApi) apiActionWithValues(action string, values *url.Values) (*url.URL, error) {
@@ -179,4 +143,18 @@ func (ns *NamesiloApi) apiActionWithValues(action string, values *url.Values) (*
 	reqUrl.RawQuery = newValues.Encode()
 
 	return reqUrl, nil
+}
+
+func request(url_ *url.URL, responseBody interface{}) error {
+	response, err := http.Get(url_.String())
+	if err != nil {
+		return err
+	}
+
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return err
+	}
+
+	return xml.Unmarshal(body, responseBody)
 }
