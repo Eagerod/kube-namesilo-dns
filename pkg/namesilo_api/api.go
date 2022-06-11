@@ -29,6 +29,7 @@ type ListDNSRecordsResponse struct {
 	Reply   struct {
 		XMLName         xml.Name         `xml:"reply"`
 		ResourceRecords []ResourceRecord `xml:"resource_record"`
+		Detail          string           `xml:"detail"`
 	}
 }
 
@@ -73,7 +74,11 @@ func (ns *NamesiloApi) ListDNSRecords(domain string) ([]ResourceRecord, error) {
 		return nil, err
 	}
 
-	return ldrr.Reply.ResourceRecords, nil
+	if ldrr.Reply.Detail == "success" {
+		return ldrr.Reply.ResourceRecords, nil
+	}
+
+	return nil, fmt.Errorf("namesilo domain list failed with: %s", ldrr.Reply.Detail)
 }
 
 func (ns *NamesiloApi) UpdateDNSRecord(domain, host, id, value string, ttl int) error {

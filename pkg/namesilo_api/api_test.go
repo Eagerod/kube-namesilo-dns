@@ -26,6 +26,7 @@ func TestListDNSRecord(t *testing.T) {
 
 		var response ListDNSRecordsResponse
 		response.Reply.ResourceRecords = append(response.Reply.ResourceRecords, ResourceRecord{})
+		response.Reply.Detail = "success"
 		body, err := xml.Marshal(response)
 		assert.NoError(t, err)
 		w.Write(body)
