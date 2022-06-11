@@ -60,18 +60,14 @@ func NewNamesiloApiWithServer(apiKey, apiPrefix string) *NamesiloApi {
 }
 
 func (ns *NamesiloApi) ListDNSRecords(domain string) ([]ResourceRecord, error) {
-	reqUrl, err := url.Parse(fmt.Sprintf("%s/%s", ns.apiPrefix, "dnsListRecords"))
+	reqValues := url.Values{}
+
+	reqValues.Add("domain", domain)
+
+	reqUrl, err := ns.apiActionWithValues("dnsListRecords", &reqValues)
 	if err != nil {
 		return nil, err
 	}
-
-	reqQuery := reqUrl.Query()
-	reqQuery.Add("version", "1")
-	reqQuery.Add("type", "xml")
-	reqQuery.Add("key", ns.apiKey)
-	reqQuery.Add("domain", domain)
-
-	reqUrl.RawQuery = reqQuery.Encode()
 
 	response, err := http.Get(reqUrl.String())
 	if err != nil {
@@ -96,22 +92,18 @@ func (ns *NamesiloApi) ListDNSRecords(domain string) ([]ResourceRecord, error) {
 }
 
 func (ns *NamesiloApi) UpdateDNSRecord(domain, host, id, value string, ttl int) error {
-	reqUrl, err := url.Parse(fmt.Sprintf("%s/%s", ns.apiPrefix, "dnsUpdateRecord"))
+	reqValues := url.Values{}
+
+	reqValues.Add("domain", domain)
+	reqValues.Add("rrid", id)
+	reqValues.Add("rrhost", host)
+	reqValues.Add("rrvalue", value)
+	reqValues.Add("rrttl", strconv.Itoa(ttl))
+
+	reqUrl, err := ns.apiActionWithValues("dnsUpdateRecord", &reqValues)
 	if err != nil {
 		return err
 	}
-
-	reqQuery := reqUrl.Query()
-	reqQuery.Add("version", "1")
-	reqQuery.Add("type", "xml")
-	reqQuery.Add("key", ns.apiKey)
-	reqQuery.Add("domain", domain)
-	reqQuery.Add("rrid", id)
-	reqQuery.Add("rrhost", host)
-	reqQuery.Add("rrvalue", value)
-	reqQuery.Add("rrttl", strconv.Itoa(ttl))
-
-	reqUrl.RawQuery = reqQuery.Encode()
 
 	response, err := http.Get(reqUrl.String())
 	if err != nil {
@@ -136,23 +128,19 @@ func (ns *NamesiloApi) UpdateDNSRecord(domain, host, id, value string, ttl int) 
 }
 
 func (ns *NamesiloApi) AddDNSRecord(domain, domainType, host, value string, ttl int) error {
-	reqUrl, err := url.Parse(fmt.Sprintf("%s/%s", ns.apiPrefix, "dnsAddRecord"))
+	reqValues := url.Values{}
+
+	reqValues.Add("domain", domain)
+	reqValues.Add("rrtype", domainType)
+	reqValues.Add("rrhost", host)
+	reqValues.Add("rrvalue", domain)
+	reqValues.Add("rrttl", strconv.Itoa(ttl))
+	reqValues.Add("rrdistance", "0")
+
+	reqUrl, err := ns.apiActionWithValues("dnsAddRecord", &reqValues)
 	if err != nil {
 		return err
 	}
-
-	reqQuery := reqUrl.Query()
-	reqQuery.Add("version", "1")
-	reqQuery.Add("type", "xml")
-	reqQuery.Add("key", ns.apiKey)
-	reqQuery.Add("domain", domain)
-	reqQuery.Add("rrtype", domainType)
-	reqQuery.Add("rrhost", host)
-	reqQuery.Add("rrvalue", domain)
-	reqQuery.Add("rrttl", strconv.Itoa(ttl))
-	reqQuery.Add("rrdistance", "0")
-
-	reqUrl.RawQuery = reqQuery.Encode()
 
 	response, err := http.Get(reqUrl.String())
 	if err != nil {
@@ -174,4 +162,21 @@ func (ns *NamesiloApi) AddDNSRecord(domain, domainType, host, value string, ttl 
 	}
 
 	return fmt.Errorf("namesilo domain add failed with: %s", durr.Reply.Detail)
+}
+
+func (ns *NamesiloApi) apiActionWithValues(action string, values *url.Values) (*url.URL, error) {
+	reqUrl, err := url.Parse(fmt.Sprintf("%s/%s", ns.apiPrefix, action))
+	if err != nil {
+		return nil, err
+	}
+
+	newValues := *values
+
+	newValues.Add("version", "1")
+	newValues.Add("type", "xml")
+	newValues.Add("key", ns.apiKey)
+
+	reqUrl.RawQuery = newValues.Encode()
+
+	return reqUrl, nil
 }
