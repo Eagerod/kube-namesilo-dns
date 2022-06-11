@@ -7,10 +7,11 @@ import (
 	"net/http"
 )
 
-const NamesiloApiURLPrefix string = "https://www.namesilo.com/api/"
+const DefaultApiURLPrefix string = "https://www.namesilo.com/api/"
 
 type NamesiloApi struct {
 	apiKey string
+	apiPrefix string
 }
 
 type ResourceRecord struct {
@@ -44,11 +45,19 @@ type DNSUpdateRecordsResponse DNSAddRecordsResponse
 func NewNamesiloApi(apiKey string) *NamesiloApi {
 	return &NamesiloApi{
 		apiKey: apiKey,
+		apiPrefix: DefaultApiURLPrefix,
+	}
+}
+
+func NewNamesiloApiWithServer(apiKey, apiPrefix string) *NamesiloApi {
+	return &NamesiloApi{
+		apiKey: apiKey,
+		apiPrefix: apiPrefix,
 	}
 }
 
 func (ns *NamesiloApi) ListDNSRecords(domain string) ([]ResourceRecord, error) {
-	url := fmt.Sprintf("%s/%s?version=1&type=xml&key=%s&domain=%s", NamesiloApiURLPrefix, "dnsListRecords", ns.apiKey, domain)
+	url := fmt.Sprintf("%s/%s?version=1&type=xml&key=%s&domain=%s", ns.apiPrefix, "dnsListRecords", ns.apiKey, domain)
 	response, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -68,7 +77,7 @@ func (ns *NamesiloApi) ListDNSRecords(domain string) ([]ResourceRecord, error) {
 }
 
 func (ns *NamesiloApi) UpdateDNSRecord(domain, host, id, value string, ttl int) error {
-	url := fmt.Sprintf("%s/%s?version=1&type=xml&key=%s&domain=%s&rrid=%s&rrhost=%s&rrvalue=%s&rrttl=%d", NamesiloApiURLPrefix, "dnsUpdateRecord", ns.apiKey, domain, id, host, value, ttl)
+	url := fmt.Sprintf("%s/%s?version=1&type=xml&key=%s&domain=%s&rrid=%s&rrhost=%s&rrvalue=%s&rrttl=%d", ns.apiPrefix, "dnsUpdateRecord", ns.apiKey, domain, id, host, value, ttl)
 	response, err := http.Get(url)
 	if err != nil {
 		return err
@@ -92,7 +101,7 @@ func (ns *NamesiloApi) UpdateDNSRecord(domain, host, id, value string, ttl int) 
 }
 
 func (ns *NamesiloApi) AddDNSRecord(domain, domainType, host, value string, ttl int) error {
-	url := fmt.Sprintf("%s/%s?version=1&type=xml&key=%s&domain=%s&rrtype=%s&rrhost=%s&rrvalue=%s&rrttl=%d&rrdistance=0", NamesiloApiURLPrefix, "dnsAddRecord", ns.apiKey, domain, domainType, host, domain, ttl)
+	url := fmt.Sprintf("%s/%s?version=1&type=xml&key=%s&domain=%s&rrtype=%s&rrhost=%s&rrvalue=%s&rrttl=%d&rrdistance=0", ns.apiPrefix, "dnsAddRecord", ns.apiKey, domain, domainType, host, domain, ttl)
 	response, err := http.Get(url)
 	if err != nil {
 		return err
