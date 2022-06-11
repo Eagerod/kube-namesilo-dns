@@ -31,13 +31,15 @@ type ListDNSRecordsResponse struct {
 	}
 }
 
-type DNSUpdateRecordsResponse struct {
+type DNSAddRecordsResponse struct {
 	XMLName xml.Name `xml:"namesilo"`
 	Reply   struct {
 		XMLName xml.Name `xml:"reply"`
 		Detail  string   `xml:"detail"`
 	}
 }
+
+type DNSUpdateRecordsResponse DNSAddRecordsResponse
 
 func NewNamesiloApi(apiKey string) *NamesiloApi {
 	return &NamesiloApi{
@@ -86,5 +88,29 @@ func (ns *NamesiloApi) UpdateDNSRecord(domain, host, id, value string, ttl int) 
 		return nil
 	}
 
-	return fmt.Errorf("Namesilo domain update failed with: %s", durr.Reply.Detail)
+	return fmt.Errorf("namesilo domain update failed with: %s", durr.Reply.Detail)
+}
+
+func (ns *NamesiloApi) AddDNSRecord(domain, domainType, host, value string, ttl int) error {
+	url := fmt.Sprintf("%s/%s?version=1&type=xml&key=%s&domain=%s&rrtype=%s&rrhost=%s&rrvalue=%s&rrttl=%d&rrdistance=0", NamesiloApiURLPrefix, "dnsAddRecord", ns.apiKey, domain, domainType, host, domain, ttl)
+	response, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return err
+	}
+
+	var durr DNSAddRecordsResponse
+	if err := xml.Unmarshal(body, &durr); err != nil {
+		return err
+	}
+
+	if durr.Reply.Detail == "success" {
+		return nil
+	}
+
+	return fmt.Errorf("namesilo domain add failed with: %s", durr.Reply.Detail)
 }

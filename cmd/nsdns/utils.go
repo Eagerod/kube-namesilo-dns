@@ -47,7 +47,7 @@ func GetResourcesFromKubernetesIngresses(domainName, ip string) ([]namesilo_api.
 
 	for _, item := range items.Items {
 		if ingressClass, _ := item.Annotations["kubernetes.io/ingress.class"]; ingressClass != "nginx-external" {
-			log.Debugf("Skipping ingress %s because it has incorrect ingress class", item.ObjectMeta.Name)
+			log.Tracef("Skipping ingress %s because it has incorrect ingress class", item.ObjectMeta.Name)
 			continue
 		}
 
