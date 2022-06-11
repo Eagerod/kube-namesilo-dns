@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
+	"strconv"
 )
 
 const DefaultApiURLPrefix string = "https://www.namesilo.com/api/"
@@ -58,8 +60,20 @@ func NewNamesiloApiWithServer(apiKey, apiPrefix string) *NamesiloApi {
 }
 
 func (ns *NamesiloApi) ListDNSRecords(domain string) ([]ResourceRecord, error) {
-	url := fmt.Sprintf("%s/%s?version=1&type=xml&key=%s&domain=%s", ns.apiPrefix, "dnsListRecords", ns.apiKey, domain)
-	response, err := http.Get(url)
+	reqUrl, err := url.Parse(fmt.Sprintf("%s/%s", ns.apiPrefix, "dnsListRecords"))
+	if err != nil {
+		return nil, err
+	}
+
+	reqQuery := reqUrl.Query()
+	reqQuery.Add("version", "1")
+	reqQuery.Add("type", "xml")
+	reqQuery.Add("key", ns.apiKey)
+	reqQuery.Add("domain", domain)
+
+	reqUrl.RawQuery = reqQuery.Encode()
+
+	response, err := http.Get(reqUrl.String())
 	if err != nil {
 		return nil, err
 	}
@@ -82,8 +96,24 @@ func (ns *NamesiloApi) ListDNSRecords(domain string) ([]ResourceRecord, error) {
 }
 
 func (ns *NamesiloApi) UpdateDNSRecord(domain, host, id, value string, ttl int) error {
-	url := fmt.Sprintf("%s/%s?version=1&type=xml&key=%s&domain=%s&rrid=%s&rrhost=%s&rrvalue=%s&rrttl=%d", ns.apiPrefix, "dnsUpdateRecord", ns.apiKey, domain, id, host, value, ttl)
-	response, err := http.Get(url)
+	reqUrl, err := url.Parse(fmt.Sprintf("%s/%s", ns.apiPrefix, "dnsUpdateRecord"))
+	if err != nil {
+		return err
+	}
+
+	reqQuery := reqUrl.Query()
+	reqQuery.Add("version", "1")
+	reqQuery.Add("type", "xml")
+	reqQuery.Add("key", ns.apiKey)
+	reqQuery.Add("domain", domain)
+	reqQuery.Add("rrid", id)
+	reqQuery.Add("rrhost", host)
+	reqQuery.Add("rrvalue", value)
+	reqQuery.Add("rrttl", strconv.Itoa(ttl))
+
+	reqUrl.RawQuery = reqQuery.Encode()
+
+	response, err := http.Get(reqUrl.String())
 	if err != nil {
 		return err
 	}
@@ -106,8 +136,25 @@ func (ns *NamesiloApi) UpdateDNSRecord(domain, host, id, value string, ttl int) 
 }
 
 func (ns *NamesiloApi) AddDNSRecord(domain, domainType, host, value string, ttl int) error {
-	url := fmt.Sprintf("%s/%s?version=1&type=xml&key=%s&domain=%s&rrtype=%s&rrhost=%s&rrvalue=%s&rrttl=%d&rrdistance=0", ns.apiPrefix, "dnsAddRecord", ns.apiKey, domain, domainType, host, domain, ttl)
-	response, err := http.Get(url)
+	reqUrl, err := url.Parse(fmt.Sprintf("%s/%s", ns.apiPrefix, "dnsAddRecord"))
+	if err != nil {
+		return err
+	}
+
+	reqQuery := reqUrl.Query()
+	reqQuery.Add("version", "1")
+	reqQuery.Add("type", "xml")
+	reqQuery.Add("key", ns.apiKey)
+	reqQuery.Add("domain", domain)
+	reqQuery.Add("rrtype", domainType)
+	reqQuery.Add("rrhost", host)
+	reqQuery.Add("rrvalue", domain)
+	reqQuery.Add("rrttl", strconv.Itoa(ttl))
+	reqQuery.Add("rrdistance", "0")
+
+	reqUrl.RawQuery = reqQuery.Encode()
+
+	response, err := http.Get(reqUrl.String())
 	if err != nil {
 		return err
 	}
