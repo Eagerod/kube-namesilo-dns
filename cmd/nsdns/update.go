@@ -114,7 +114,7 @@ func updateARecord(api *namesilo_api.NamesiloApi, record namesilo_api.ResourceRe
 }
 
 func addARecord(api *namesilo_api.NamesiloApi, record namesilo_api.ResourceRecord, domainName, ip string) error {
-	err:= api.AddDNSRecord(domainName, record.Type, "", ip, 7207)
+	err := api.AddDNSRecord(domainName, record.Type, "", ip, 7207)
 	if err != nil {
 		return err
 	}

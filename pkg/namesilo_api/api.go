@@ -10,7 +10,7 @@ import (
 const DefaultApiURLPrefix string = "https://www.namesilo.com/api/"
 
 type NamesiloApi struct {
-	apiKey string
+	apiKey    string
 	apiPrefix string
 }
 
@@ -44,14 +44,14 @@ type DNSUpdateRecordsResponse DNSAddRecordsResponse
 
 func NewNamesiloApi(apiKey string) *NamesiloApi {
 	return &NamesiloApi{
-		apiKey: apiKey,
+		apiKey:    apiKey,
 		apiPrefix: DefaultApiURLPrefix,
 	}
 }
 
 func NewNamesiloApiWithServer(apiKey, apiPrefix string) *NamesiloApi {
 	return &NamesiloApi{
-		apiKey: apiKey,
+		apiKey:    apiKey,
 		apiPrefix: apiPrefix,
 	}
 }
