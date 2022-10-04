@@ -24,8 +24,14 @@ func updateCommand() *cobra.Command {
 		Use:   "update",
 		Short: "update dns records",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			log.SetLevel(log.DebugLevel)
+
 			if domainName == "" {
 				return fmt.Errorf("Must provide a domain name to update DNS records.")
+			}
+
+			if ingressClass == "" {
+				return fmt.Errorf("Must provide an ingress class to select DNS records.")
 			}
 
 			nsApiKey := os.Getenv("NAMESILO_API_KEY")
@@ -47,7 +53,7 @@ func updateCommand() *cobra.Command {
 				return err
 			}
 
-			ingressRecords, err := GetResourcesFromKubernetesIngresses(domainName, ip)
+			ingressRecords, err := GetResourcesFromKubernetesIngresses(domainName, ip, ingressClass)
 			if err != nil {
 				return err
 			}

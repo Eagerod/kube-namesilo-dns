@@ -24,7 +24,7 @@ type RecordReconciliation struct {
 	NoOp   []namesilo_api.ResourceRecord
 }
 
-func GetResourcesFromKubernetesIngresses(domainName, ip string) ([]namesilo_api.ResourceRecord, error) {
+func GetResourcesFromKubernetesIngresses(domainName, ip, ingressClass string) ([]namesilo_api.ResourceRecord, error) {
 	rv := []namesilo_api.ResourceRecord{}
 
 	home := homedir.HomeDir()
@@ -46,7 +46,7 @@ func GetResourcesFromKubernetesIngresses(domainName, ip string) ([]namesilo_api.
 	}
 
 	for _, item := range items.Items {
-		if ingressClass, _ := item.Annotations["kubernetes.io/ingress.class"]; ingressClass != "nginx-external" {
+		if thisIngressClass, _ := item.Annotations["kubernetes.io/ingress.class"]; thisIngressClass != ingressClass {
 			log.Tracef("Skipping ingress %s because it has incorrect ingress class", item.ObjectMeta.Name)
 			continue
 		}
