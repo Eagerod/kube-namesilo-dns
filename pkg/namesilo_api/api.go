@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 )
 
 const DefaultApiURLPrefix string = "https://www.namesilo.com/api/"
@@ -47,11 +48,7 @@ type DNSAddRecordsResponse struct {
 type DNSUpdateRecordsResponse DNSAddRecordsResponse
 
 func NewNamesiloApi(domain, apiKey string) *NamesiloApi {
-	return &NamesiloApi{
-		apiKey:    apiKey,
-		apiPrefix: DefaultApiURLPrefix,
-		domain:    domain,
-	}
+	return NewNamesiloApiWithServer(domain, apiKey, DefaultApiURLPrefix)
 }
 
 func NewNamesiloApiWithServer(domain, apiKey, apiPrefix string) *NamesiloApi {
@@ -102,14 +99,23 @@ func (ns *NamesiloApi) UpdateDNSRecord(domain, host, id, value string, ttl int) 
 	return nil
 }
 
-func (ns *NamesiloApi) AddDNSRecord(domain, domainType, host, value string, ttl int) error {
+
+// Adds a resource record to a Namesilo Domain.
+func (ns *NamesiloApi) AddDNSRecord(rr ResourceRecord) error {
+	if rr.Host == ns.domain {
+		rr.Host = ""
+	} else {
+		domainSuffix := fmt.Sprintf(".%s", ns.domain)
+		rr.Host = strings.TrimSuffix(rr.Host, domainSuffix)
+	}
+
 	reqValues := url.Values{}
 
-	reqValues.Add("rrtype", domainType)
-	reqValues.Add("rrhost", host)
-	reqValues.Add("rrvalue", domain)
-	reqValues.Add("rrttl", strconv.Itoa(ttl))
-	reqValues.Add("rrdistance", "0")
+	reqValues.Add("rrtype", rr.Type)
+	reqValues.Add("rrhost", rr.Host)
+	reqValues.Add("rrvalue", rr.Value)
+	reqValues.Add("rrttl", strconv.Itoa(rr.TTL))
+	reqValues.Add("rrdistance", strconv.Itoa(rr.Distance))
 
 	reqUrl, err := ns.apiActionWithValues("dnsAddRecord", &reqValues)
 	if err != nil {

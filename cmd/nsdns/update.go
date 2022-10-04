@@ -61,17 +61,8 @@ func updateCommand() *cobra.Command {
 			}
 
 			for _, record := range rr.Add {
-				switch record.Type {
-				case "A":
-					if err := addARecord(api, record, domainName, ip); err != nil {
-						return err
-					}
-				case "CNAME":
-					if err := addCnameRecord(api, record, domainName); err != nil {
-						return err
-					}
-				default:
-					log.Infof("Can't add record of type \"%s\"\n", record.Type)
+				if err := api.AddDNSRecord(record); err != nil {
+					return err
 				}
 			}
 
@@ -113,17 +104,6 @@ func updateARecord(api *namesilo_api.NamesiloApi, record namesilo_api.ResourceRe
 	return nil
 }
 
-func addARecord(api *namesilo_api.NamesiloApi, record namesilo_api.ResourceRecord, domainName, ip string) error {
-	err := api.AddDNSRecord(domainName, record.Type, "", ip, 7207)
-	if err != nil {
-		return err
-	}
-
-	log.Infof("Created %s record %s to %s", record.Type, domainName, ip)
-
-	return nil
-}
-
 func updateCnameRecord(api *namesilo_api.NamesiloApi, record namesilo_api.ResourceRecord, domainName string) error {
 	if record.Value == domainName {
 		log.Infof("Skipping CNAME record %s because it's already set correctly\n", record.Host)
@@ -136,20 +116,6 @@ func updateCnameRecord(api *namesilo_api.NamesiloApi, record namesilo_api.Resour
 
 		log.Infof("Updated %s record %s to %s", record.Type, record.RecordId, domainName)
 	}
-
-	return nil
-}
-
-func addCnameRecord(api *namesilo_api.NamesiloApi, record namesilo_api.ResourceRecord, domainName string) error {
-	domainSuffix := fmt.Sprintf(".%s", domainName)
-	subdomain := strings.TrimSuffix(record.Host, domainSuffix)
-
-	err := api.AddDNSRecord(domainName, record.Type, subdomain, subdomain, 7207)
-	if err != nil {
-		return err
-	}
-
-	log.Infof("Created %s record %s to %s", record.Type, subdomain, domainName)
 
 	return nil
 }
