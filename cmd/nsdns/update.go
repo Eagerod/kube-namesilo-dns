@@ -67,6 +67,7 @@ func updateCommand() *cobra.Command {
 			}
 
 			for _, record := range rr.Add {
+				log.Infof("Adding record for %s", record.Host)
 				if err := api.AddDNSRecord(record); err != nil {
 					return err
 				}
