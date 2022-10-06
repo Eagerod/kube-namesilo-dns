@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strings"
 )
 
 import (
@@ -76,11 +75,11 @@ func updateCommand() *cobra.Command {
 			for _, record := range rr.Update {
 				switch record.Type {
 				case "A":
-					if err := updateARecord(api, record, domainName, ip); err != nil {
+					if err := updateRecordIfNeeded(api, record, ip); err != nil {
 						return err
 					}
 				case "CNAME":
-					if err := updateCnameRecord(api, record, domainName); err != nil {
+					if err := updateRecordIfNeeded(api, record, domainName); err != nil {
 						return err
 					}
 				default:
@@ -97,32 +96,18 @@ func updateCommand() *cobra.Command {
 	return updateCmd
 }
 
-func updateARecord(api *namesilo_api.NamesiloApi, record namesilo_api.ResourceRecord, domainName, ip string) error {
-	if record.Value == ip {
-		log.Infof("Skipping A record %s because it's already set correctly\n", record.Host)
-	} else {
-		if err := api.UpdateDNSRecord(domainName, "", record.RecordId, ip, 7207); err != nil {
-			return err
-		}
-
-		log.Infof("Updated %s record %s to %s", record.Type, record.RecordId, ip)
+func updateRecordIfNeeded(api *namesilo_api.NamesiloApi, record namesilo_api.ResourceRecord, value string) error {
+	if record.Value == value {
+		log.Infof("Skipping %s record %s because it's already set correctly\n", record.Type, record.Host)
+		return nil
 	}
 
-	return nil
-}
-
-func updateCnameRecord(api *namesilo_api.NamesiloApi, record namesilo_api.ResourceRecord, domainName string) error {
-	if record.Value == domainName {
-		log.Infof("Skipping CNAME record %s because it's already set correctly\n", record.Host)
-	} else {
-		domainSuffix := fmt.Sprintf(".%s", domainName)
-		subdomain := strings.TrimSuffix(record.Host, domainSuffix)
-		if err := api.UpdateDNSRecord(domainName, subdomain, record.RecordId, domainName, 7207); err != nil {
-			return err
-		}
-
-		log.Infof("Updated %s record %s to %s", record.Type, record.RecordId, domainName)
+	record.Value = value
+	if err := api.UpdateDNSRecord(record); err != nil {
+		log.Errorf("Failed to update %s record with %s", record.Type, err.Error())
+		return err
 	}
 
+	log.Infof("Updated %s record %s to %s", record.Type, record.RecordId, value)
 	return nil
 }
