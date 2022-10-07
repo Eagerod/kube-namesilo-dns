@@ -24,7 +24,7 @@ type RecordReconciliation struct {
 	NoOp   []namesilo_api.ResourceRecord
 }
 
-func GetResourcesFromKubernetesIngresses(domainName, ip string) ([]namesilo_api.ResourceRecord, error) {
+func GetResourcesFromKubernetesIngresses(domainName, ip, ingressClass string) ([]namesilo_api.ResourceRecord, error) {
 	rv := []namesilo_api.ResourceRecord{}
 
 	home := homedir.HomeDir()
@@ -46,7 +46,7 @@ func GetResourcesFromKubernetesIngresses(domainName, ip string) ([]namesilo_api.
 	}
 
 	for _, item := range items.Items {
-		if ingressClass, _ := item.Annotations["kubernetes.io/ingress.class"]; ingressClass != "nginx-external" {
+		if thisIngressClass, _ := item.Annotations["kubernetes.io/ingress.class"]; thisIngressClass != ingressClass {
 			log.Tracef("Skipping ingress %s because it has incorrect ingress class", item.ObjectMeta.Name)
 			continue
 		}
@@ -72,7 +72,7 @@ func ReconcileRecords(existing, new []namesilo_api.ResourceRecord) RecordReconci
 
 	for _, res := range new {
 		if r, ok := existingByHost[res.Host]; ok {
-			if RecordRequiresReconciliation(r, res) {
+			if RecordsEqual(r, res) {
 				rr.NoOp = append(rr.NoOp, res)
 			} else {
 				rr.Update = append(rr.Update, res)
@@ -85,7 +85,7 @@ func ReconcileRecords(existing, new []namesilo_api.ResourceRecord) RecordReconci
 	return rr
 }
 
-func RecordRequiresReconciliation(existing, new namesilo_api.ResourceRecord) bool {
+func RecordsEqual(existing, new namesilo_api.ResourceRecord) bool {
 	return existing.Type == new.Type &&
 		existing.Host == new.Host &&
 		existing.Value == new.Value &&
