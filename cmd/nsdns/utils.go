@@ -42,8 +42,8 @@ func GetResourcesFromKubernetesIngresses(domainName, ip, ingressClass string) ([
 	}
 
 	for _, item := range items.Items {
-		if thisIngressClass, _ := item.Annotations["kubernetes.io/ingress.class"]; thisIngressClass != ingressClass {
-			log.Tracef("Skipping ingress %s because it has incorrect ingress class", item.ObjectMeta.Name)
+		if ShouldProcessIngress(ingressClass, &item) {
+			log.Debugf("Skipping ingress %s because it has incorrect ingress class", item.ObjectMeta.Name)
 			continue
 		}
 
@@ -56,6 +56,14 @@ func GetResourcesFromKubernetesIngresses(domainName, ip, ingressClass string) ([
 	}
 
 	return rv, nil
+}
+
+func ShouldProcessIngress(desiredIngressClass string, ingress *networkingv1.Ingress) bool {
+	ic, ok := ingress.Annotations["kubernetes.io/ingress.class"]
+	if !ok {
+		return false
+	}
+	return ic == desiredIngressClass
 }
 
 func ReconcileRecords(existing, new []namesilo_api.ResourceRecord) RecordReconciliation {
