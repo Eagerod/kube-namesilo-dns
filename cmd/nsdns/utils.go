@@ -2,13 +2,16 @@ package cmd
 
 import (
 	"context"
-	"path/filepath"
+	"errors"
+	"os"
+	"path"
 )
 
 import (
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 )
@@ -27,19 +30,12 @@ type RecordReconciliation struct {
 func GetResourcesFromKubernetesIngresses(domainName, ip, ingressClass string) ([]namesilo_api.ResourceRecord, error) {
 	rv := []namesilo_api.ResourceRecord{}
 
-	home := homedir.HomeDir()
-	kc := filepath.Join(home, ".kube", "config")
+	clientset, err := GetKubernetesClientSet()
+	if err != nil {
+		return rv, err
+	}
+
 	ctx := context.TODO()
-	config, err := clientcmd.BuildConfigFromFlags("", kc)
-	if err != nil {
-		return rv, err
-	}
-
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return rv, err
-	}
-
 	items, err := clientset.NetworkingV1().Ingresses("default").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return rv, err
@@ -91,4 +87,24 @@ func RecordsEqual(existing, new namesilo_api.ResourceRecord) bool {
 		existing.Value == new.Value &&
 		existing.TTL == new.TTL &&
 		existing.Distance == new.Distance
+}
+
+func GetKubernetesClientSet() (*kubernetes.Clientset, error) {
+	if config, err := rest.InClusterConfig(); err == nil {
+		return kubernetes.NewForConfig(config)
+	} else {
+		log.Info(err.Error())
+	}
+
+	kubeconfigPath := os.Getenv("KUBECONFIG")
+	if kubeconfigPath == "" {
+		kubeconfigPath = path.Join(homedir.HomeDir(), ".kube", "config")
+	}
+	if config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath); err == nil {
+		return kubernetes.NewForConfig(config)
+	} else {
+		log.Info(err.Error())
+	}
+
+	return nil, errors.New("failed to configure Kubernetes client")
 }
