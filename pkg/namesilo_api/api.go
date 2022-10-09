@@ -47,6 +47,7 @@ type DNSAddRecordsResponse struct {
 }
 
 type DNSUpdateRecordsResponse DNSAddRecordsResponse
+type DNSDeleteRecordsResponse DNSAddRecordsResponse
 
 func NewNamesiloApi(domain, apiKey string) *NamesiloApi {
 	return NewNamesiloApiWithServer(domain, apiKey, DefaultApiURLPrefix)
@@ -141,6 +142,30 @@ func (ns *NamesiloApi) AddDNSRecord(rr ResourceRecord) error {
 		return err
 	} else if darr.Reply.Detail != "success" {
 		return fmt.Errorf("namesilo domain add failed with: %s", darr.Reply.Detail)
+	}
+
+	return nil
+}
+
+func (ns *NamesiloApi) DeleteDNSRecord(rr ResourceRecord) error {
+	if rr.RecordId == "" {
+		return errors.New("cannot delete DNS record without ID")
+	}
+
+	reqValues := url.Values{}
+
+	reqValues.Add("rrid", rr.RecordId)
+
+	reqUrl, err := ns.apiActionWithValues("dnsDeleteRecord", &reqValues)
+	if err != nil {
+		return err
+	}
+
+	var darr DNSDeleteRecordsResponse
+	if err := request(reqUrl, &darr); err != nil {
+		return err
+	} else if darr.Reply.Detail != "success" {
+		return fmt.Errorf("namesilo domain delete failed with: %s", darr.Reply.Detail)
 	}
 
 	return nil
