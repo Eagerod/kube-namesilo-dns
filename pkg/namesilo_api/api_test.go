@@ -287,7 +287,6 @@ func TestDeleteDNSRecordFailsWithoutId(t *testing.T) {
 	calls := 0
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/dnsDeleteRecord", r.URL.Path)
 		calls += 1
 	}))
 	defer server.Close()
