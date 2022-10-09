@@ -161,11 +161,11 @@ func (ns *NamesiloApi) DeleteDNSRecord(rr ResourceRecord) error {
 		return err
 	}
 
-	var darr DNSDeleteRecordsResponse
-	if err := request(reqUrl, &darr); err != nil {
+	var ddrr DNSDeleteRecordsResponse
+	if err := request(reqUrl, &ddrr); err != nil {
 		return err
-	} else if darr.Reply.Detail != "success" {
-		return fmt.Errorf("namesilo domain delete failed with: %s", darr.Reply.Detail)
+	} else if ddrr.Reply.Detail != "success" {
+		return fmt.Errorf("namesilo domain delete failed with: %s", ddrr.Reply.Detail)
 	}
 
 	return nil
