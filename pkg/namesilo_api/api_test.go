@@ -198,9 +198,6 @@ func TestAddDNSRecordARecord(t *testing.T) {
 	assert.Equal(t, expectedCalls, calls)
 }
 
-
-
-
 func TestAddDNSRecordCnameRecord(t *testing.T) {
 	expectedCalls := 1
 	calls := 0
@@ -240,6 +237,71 @@ func TestAddDNSRecordCnameRecord(t *testing.T) {
 	api := NewNamesiloApiWithServer("example.com", "api-key", server.URL)
 	err := api.AddDNSRecord(record)
 	assert.NoError(t, err)
+
+	assert.Equal(t, expectedCalls, calls)
+}
+
+func TestDeleteDNSRecord(t *testing.T) {
+	expectedCalls := 1
+	calls := 0
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/dnsDeleteRecord", r.URL.Path)
+
+		q := r.URL.Query()
+		assert.Equal(t, []string{"1"}, q["version"])
+		assert.Equal(t, []string{"xml"}, q["type"])
+		assert.Equal(t, []string{"api-key"}, q["key"])
+		assert.Equal(t, []string{"example.com"}, q["domain"])
+		assert.Equal(t, []string{"abc123"}, q["rrid"])
+
+		var response DNSUpdateRecordsResponse
+		response.Reply.Detail = "success"
+		body, err := xml.Marshal(response)
+		assert.NoError(t, err)
+		w.Write(body)
+
+		calls += 1
+	}))
+	defer server.Close()
+
+	record := ResourceRecord{
+		RecordId: "abc123",
+		Type: "CNAME",
+		Host: "sub.example.com",
+		Value: "example.com",
+		TTL: 1234,
+		Distance :0,
+	}
+
+	api := NewNamesiloApiWithServer("example.com", "api-key", server.URL)
+	err := api.DeleteDNSRecord(record)
+	assert.NoError(t, err)
+
+	assert.Equal(t, expectedCalls, calls)
+}
+
+
+func TestDeleteDNSRecordFailsWithoutId(t *testing.T) {
+	expectedCalls := 0
+	calls := 0
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls += 1
+	}))
+	defer server.Close()
+
+	record := ResourceRecord{
+		Type: "CNAME",
+		Host: "sub.example.com",
+		Value: "example.com",
+		TTL: 1234,
+		Distance :0,
+	}
+
+	api := NewNamesiloApiWithServer("example.com", "api-key", server.URL)
+	err := api.DeleteDNSRecord(record)
+	assert.Equal(t, err.Error(), "cannot delete DNS record without ID")
 
 	assert.Equal(t, expectedCalls, calls)
 }
