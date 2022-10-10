@@ -9,8 +9,9 @@ import (
 
 import (
 	log "github.com/sirupsen/logrus"
-	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -77,9 +78,10 @@ func ReconcileRecords(existing, new []namesilo_api.ResourceRecord) RecordReconci
 
 	for _, res := range new {
 		if r, ok := existingByHost[res.Host]; ok {
-			if RecordsEqual(r, res) {
+			if r.Equals(res) {
 				rr.NoOp = append(rr.NoOp, res)
 			} else {
+				res.RecordId = r.RecordId
 				rr.Update = append(rr.Update, res)
 			}
 		} else {
@@ -90,12 +92,30 @@ func ReconcileRecords(existing, new []namesilo_api.ResourceRecord) RecordReconci
 	return rr
 }
 
-func RecordsEqual(existing, new namesilo_api.ResourceRecord) bool {
-	return existing.Type == new.Type &&
-		existing.Host == new.Host &&
-		existing.Value == new.Value &&
-		existing.TTL == new.TTL &&
-		existing.Distance == new.Distance
+func OneUpdatedOrAddedResourceRecord(records []namesilo_api.ResourceRecord, ingress *networkingv1.Ingress, domainName, ip string, force bool) (*namesilo_api.ResourceRecord, error) {
+	rr, err := nsdns.NamesiloRecordFromIngress(ingress, domainName, ip)
+	if err != nil {
+		return nil, err
+	}
+
+	if force {
+		rr.TTL += 1
+	}
+
+	reconciled := ReconcileRecords(records, []namesilo_api.ResourceRecord{*rr})
+	if len(reconciled.Update) == 0 && len(reconciled.Add) == 0 {
+		return nil, nil
+	}
+
+	if len(reconciled.Add) != 0 {
+		return &reconciled.Add[0], nil
+	}
+
+	if force {
+		reconciled.Update[0].TTL -= 1
+	}
+
+	return &reconciled.Update[0], nil
 }
 
 func GetKubernetesClientSet() (*kubernetes.Clientset, error) {

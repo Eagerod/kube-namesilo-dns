@@ -19,16 +19,6 @@ type NamesiloApi struct {
 	domain    string
 }
 
-type ResourceRecord struct {
-	XMLName  xml.Name `xml:"resource_record"`
-	RecordId string   `xml:"record_id"`
-	Type     string   `xml:"type"`
-	Host     string   `xml:"host"`
-	Value    string   `xml:"value"`
-	TTL      int      `xml:"ttl"`
-	Distance int      `xml:"distance"`
-}
-
 type ListDNSRecordsResponse struct {
 	XMLName xml.Name `xml:"namesilo"`
 	Reply   struct {
