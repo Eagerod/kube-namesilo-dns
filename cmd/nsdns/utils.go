@@ -92,30 +92,15 @@ func ReconcileRecords(existing, new []namesilo_api.ResourceRecord) RecordReconci
 	return rr
 }
 
-func OneUpdatedOrAddedResourceRecord(records []namesilo_api.ResourceRecord, ingress *networkingv1.Ingress, domainName, ip string, force bool) (*namesilo_api.ResourceRecord, error) {
-	rr, err := nsdns.NamesiloRecordFromIngress(ingress, domainName, ip)
-	if err != nil {
-		return nil, err
+func RecordMatching(records []namesilo_api.ResourceRecord, record namesilo_api.ResourceRecord) (*namesilo_api.ResourceRecord, error) {
+	for _, r := range records {
+		if record.Equals(r) {
+			record.RecordId = r.RecordId
+			return &record, nil
+		}
 	}
 
-	if force {
-		rr.TTL += 1
-	}
-
-	reconciled := ReconcileRecords(records, []namesilo_api.ResourceRecord{*rr})
-	if len(reconciled.Update) == 0 && len(reconciled.Add) == 0 {
-		return nil, nil
-	}
-
-	if len(reconciled.Add) != 0 {
-		return &reconciled.Add[0], nil
-	}
-
-	if force {
-		reconciled.Update[0].TTL -= 1
-	}
-
-	return &reconciled.Update[0], nil
+	return nil, nil
 }
 
 func GetKubernetesClientSet() (*kubernetes.Clientset, error) {

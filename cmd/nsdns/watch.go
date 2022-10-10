@@ -20,6 +20,7 @@ import (
 import (
 	"github.com/Eagerod/kube-namesilo-dns/pkg/icanhazip"
 	"github.com/Eagerod/kube-namesilo-dns/pkg/namesilo_api"
+	"github.com/Eagerod/kube-namesilo-dns/pkg/nsdns"
 )
 
 func watchCommand() *cobra.Command {
@@ -102,18 +103,19 @@ func watchCommand() *cobra.Command {
 							return
 						}
 
-						updateRecord, err := OneUpdatedOrAddedResourceRecord(records, ingress, domainName, ip, false)
+						record, err := nsdns.NamesiloRecordFromIngress(ingress, domainName, ip)
 						if err != nil {
 							log.Error(err)
 							return
 						}
 
-						if updateRecord == nil {
+						existingRecord, err := RecordMatching(records, *record)
+						if existingRecord != nil {
 							return
 						}
 
-						log.Infof("Adding record for %s", updateRecord.Host)
-						if err := api.AddDNSRecord(*updateRecord); err != nil {
+						log.Infof("Adding record for %s", record.Host)
+						if err := api.AddDNSRecord(*record); err != nil {
 							log.Error(err)
 						}
 
@@ -127,20 +129,18 @@ func watchCommand() *cobra.Command {
 							return
 						}
 
-						updateRecord, err := OneUpdatedOrAddedResourceRecord(records, ingress, domainName, ip, true)
+						record, err := nsdns.NamesiloRecordFromIngress(ingress, domainName, ip)
 						if err != nil {
 							log.Error(err)
 							return
 						}
 
-						if updateRecord == nil {
-							return
-						}
+						deleteRecord, err := RecordMatching(records, *record)
 
-						log.Infof("Deleting resource record %s", updateRecord.RecordId)
-						err = api.DeleteDNSRecord(*updateRecord)
+						log.Infof("Deleting resource record %s", deleteRecord.RecordId)
+						err = api.DeleteDNSRecord(*deleteRecord)
 						if err != nil {
-							log.Error(err.Error())
+							log.Error(err)
 							return
 						}
 
@@ -154,13 +154,15 @@ func watchCommand() *cobra.Command {
 							return
 						}
 
-						updateRecord, err := OneUpdatedOrAddedResourceRecord(records, ingress, domainName, ip, false)
+						record, err := nsdns.NamesiloRecordFromIngress(ingress, domainName, ip)
 						if err != nil {
 							log.Error(err)
 							return
 						}
 
-						if updateRecord == nil {
+						// Only update if something actionable changed.
+						updateRecord, err := RecordMatching(records, *record)
+						if record.Equals(updateRecord) {
 							return
 						}
 

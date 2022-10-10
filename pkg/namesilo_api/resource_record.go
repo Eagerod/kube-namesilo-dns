@@ -15,13 +15,23 @@ type ResourceRecord struct {
 }
 
 func (r ResourceRecord) Equals(other interface{}) bool {
+	if other == nil {
+		return false
+	}
+
 	if r == other {
 		return true
 	}
 
-	otherRR, ok := other.(ResourceRecord)
-	if !ok {
-		return false
+	var otherRR ResourceRecord
+	otherRRp, ok := other.(*ResourceRecord)
+	if ok {
+		otherRR = *(otherRRp)
+	} else {
+		otherRR, ok = other.(ResourceRecord)
+		if !ok {
+			return false
+		}
 	}
 
 	matchIds := true
