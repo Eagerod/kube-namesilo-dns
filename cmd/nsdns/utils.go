@@ -10,6 +10,8 @@ import (
 import (
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -42,8 +44,8 @@ func GetResourcesFromKubernetesIngresses(domainName, ip, ingressClass string) ([
 	}
 
 	for _, item := range items.Items {
-		if thisIngressClass, _ := item.Annotations["kubernetes.io/ingress.class"]; thisIngressClass != ingressClass {
-			log.Tracef("Skipping ingress %s because it has incorrect ingress class", item.ObjectMeta.Name)
+		if ShouldProcessIngress(ingressClass, &item) {
+			log.Debugf("Skipping ingress %s because it has incorrect ingress class", item.ObjectMeta.Name)
 			continue
 		}
 
@@ -58,6 +60,14 @@ func GetResourcesFromKubernetesIngresses(domainName, ip, ingressClass string) ([
 	return rv, nil
 }
 
+func ShouldProcessIngress(desiredIngressClass string, ingress *networkingv1.Ingress) bool {
+	ic, ok := ingress.Annotations["kubernetes.io/ingress.class"]
+	if !ok {
+		return false
+	}
+	return ic == desiredIngressClass
+}
+
 func ReconcileRecords(existing, new []namesilo_api.ResourceRecord) RecordReconciliation {
 	rr := RecordReconciliation{}
 
@@ -68,9 +78,12 @@ func ReconcileRecords(existing, new []namesilo_api.ResourceRecord) RecordReconci
 
 	for _, res := range new {
 		if r, ok := existingByHost[res.Host]; ok {
-			if RecordsEqual(r, res) {
+			if r.EqualsRecord(res) {
 				rr.NoOp = append(rr.NoOp, res)
 			} else {
+				if r.RecordId != "" {
+					res.RecordId = r.RecordId
+				}
 				rr.Update = append(rr.Update, res)
 			}
 		} else {
@@ -81,12 +94,17 @@ func ReconcileRecords(existing, new []namesilo_api.ResourceRecord) RecordReconci
 	return rr
 }
 
-func RecordsEqual(existing, new namesilo_api.ResourceRecord) bool {
-	return existing.Type == new.Type &&
-		existing.Host == new.Host &&
-		existing.Value == new.Value &&
-		existing.TTL == new.TTL &&
-		existing.Distance == new.Distance
+func RecordMatching(records []namesilo_api.ResourceRecord, record namesilo_api.ResourceRecord) (*namesilo_api.ResourceRecord, error) {
+	for _, r := range records {
+		if record.EqualsRecord(r) {
+			if r.RecordId != "" {
+				record.RecordId = r.RecordId
+			}
+			return &record, nil
+		}
+	}
+
+	return nil, nil
 }
 
 func GetKubernetesClientSet() (*kubernetes.Clientset, error) {
