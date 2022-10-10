@@ -73,11 +73,11 @@ func TestUpdateDNSARecord(t *testing.T) {
 
 	record := ResourceRecord{
 		RecordId: "abc123",
-		Type: "A",
-		Host: "sub.example.com",
-		Value: "192.168.1.1",
-		TTL: 1234,
-		Distance :0,
+		Type:     "A",
+		Host:     "sub.example.com",
+		Value:    "192.168.1.1",
+		TTL:      1234,
+		Distance: 0,
 	}
 
 	api := NewNamesiloApiWithServer("example.com", "api-key", server.URL)
@@ -86,7 +86,6 @@ func TestUpdateDNSARecord(t *testing.T) {
 
 	assert.Equal(t, expectedCalls, calls)
 }
-
 
 func TestUpdateDNSCnameRecord(t *testing.T) {
 	expectedCalls := 1
@@ -117,11 +116,11 @@ func TestUpdateDNSCnameRecord(t *testing.T) {
 
 	record := ResourceRecord{
 		RecordId: "abc123",
-		Type: "CNAME",
-		Host: "sub.example.com",
-		Value: "example.com",
-		TTL: 1234,
-		Distance :0,
+		Type:     "CNAME",
+		Host:     "sub.example.com",
+		Value:    "example.com",
+		TTL:      1234,
+		Distance: 0,
 	}
 
 	api := NewNamesiloApiWithServer("example.com", "api-key", server.URL)
@@ -141,11 +140,11 @@ func TestUpdateDNSRecordFailsWithNoRRID(t *testing.T) {
 	defer server.Close()
 
 	record := ResourceRecord{
-		Type: "CNAME",
-		Host: "sub.example.com",
-		Value: "example.com",
-		TTL: 1234,
-		Distance :0,
+		Type:     "CNAME",
+		Host:     "sub.example.com",
+		Value:    "example.com",
+		TTL:      1234,
+		Distance: 0,
 	}
 
 	api := NewNamesiloApiWithServer("example.com", "api-key", server.URL)
@@ -184,11 +183,11 @@ func TestAddDNSRecordARecord(t *testing.T) {
 	defer server.Close()
 
 	record := ResourceRecord{
-		Type: "A",
-		Host: "example.com",
-		Value: "192.168.1.1",
-		TTL: 1234,
-		Distance :0,
+		Type:     "A",
+		Host:     "example.com",
+		Value:    "192.168.1.1",
+		TTL:      1234,
+		Distance: 0,
 	}
 
 	api := NewNamesiloApiWithServer("example.com", "api-key", server.URL)
@@ -227,11 +226,11 @@ func TestAddDNSRecordCnameRecord(t *testing.T) {
 	defer server.Close()
 
 	record := ResourceRecord{
-		Type: "CNAME",
-		Host: "sub.example.com",
-		Value: "example.com",
-		TTL: 1234,
-		Distance :0,
+		Type:     "CNAME",
+		Host:     "sub.example.com",
+		Value:    "example.com",
+		TTL:      1234,
+		Distance: 0,
 	}
 
 	api := NewNamesiloApiWithServer("example.com", "api-key", server.URL)
@@ -267,11 +266,11 @@ func TestDeleteDNSRecord(t *testing.T) {
 
 	record := ResourceRecord{
 		RecordId: "abc123",
-		Type: "CNAME",
-		Host: "sub.example.com",
-		Value: "example.com",
-		TTL: 1234,
-		Distance :0,
+		Type:     "CNAME",
+		Host:     "sub.example.com",
+		Value:    "example.com",
+		TTL:      1234,
+		Distance: 0,
 	}
 
 	api := NewNamesiloApiWithServer("example.com", "api-key", server.URL)
@@ -280,7 +279,6 @@ func TestDeleteDNSRecord(t *testing.T) {
 
 	assert.Equal(t, expectedCalls, calls)
 }
-
 
 func TestDeleteDNSRecordFailsWithoutId(t *testing.T) {
 	expectedCalls := 0
@@ -292,11 +290,11 @@ func TestDeleteDNSRecordFailsWithoutId(t *testing.T) {
 	defer server.Close()
 
 	record := ResourceRecord{
-		Type: "CNAME",
-		Host: "sub.example.com",
-		Value: "example.com",
-		TTL: 1234,
-		Distance :0,
+		Type:     "CNAME",
+		Host:     "sub.example.com",
+		Value:    "example.com",
+		TTL:      1234,
+		Distance: 0,
 	}
 
 	api := NewNamesiloApiWithServer("example.com", "api-key", server.URL)
