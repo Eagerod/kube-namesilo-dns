@@ -75,8 +75,6 @@ func watchCommand() *cobra.Command {
 				return err
 			}
 
-			// Don't actually start the informer until basic information is
-			//   available.
 			go func() {
 				for range time.Tick(time.Hour) {
 					if err := refreshState(); err != nil {
