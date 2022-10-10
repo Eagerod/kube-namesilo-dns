@@ -71,16 +71,13 @@ func watchCommand() *cobra.Command {
 				return nil
 			}
 
+			if err := refreshState(); err != nil {
+				return err
+			}
+
 			// Don't actually start the informer until basic information is
 			//   available.
-			done := make(chan struct{})
 			go func() {
-				if err := refreshState(); err != nil {
-					panic(err)
-				}
-
-				done <- struct{}{}
-
 				for range time.Tick(time.Hour) {
 					if err := refreshState(); err != nil {
 						panic(err)
@@ -176,8 +173,6 @@ func watchCommand() *cobra.Command {
 					},
 				},
 			)
-
-			<-done
 
 			stop := make(chan struct{})
 			informerFactory.Start(stop)
