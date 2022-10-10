@@ -1,3 +1,11 @@
-# In-Cluster Namesilo DNS Thing
+# Namesilo DNS Operator
 
-I don't really know what this is supposed to do yet, but it'll probably update DNS records in Namesilo to match those defined in Kubernetes Ingress resources.
+Kubernetes operator to watch Ingress objects, and update Namesilo DNS records.
+
+Can be executed "just once" using `update`, or can be run as an operator with `watch`.
+
+Usage:
+
+```
+nsdns (update|watch) --domain <domain.name> --ingress-class <some-class>
+```
