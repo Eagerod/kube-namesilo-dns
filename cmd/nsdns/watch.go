@@ -181,6 +181,7 @@ func watchCommand() *cobra.Command {
 			signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
 			<-sig
+			stop <- struct{}{}
 
 			return nil
 		},
