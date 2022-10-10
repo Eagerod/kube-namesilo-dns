@@ -81,7 +81,9 @@ func ReconcileRecords(existing, new []namesilo_api.ResourceRecord) RecordReconci
 			if r.Equals(res) {
 				rr.NoOp = append(rr.NoOp, res)
 			} else {
-				res.RecordId = r.RecordId
+				if r.RecordId != "" {
+					res.RecordId = r.RecordId
+				}
 				rr.Update = append(rr.Update, res)
 			}
 		} else {
