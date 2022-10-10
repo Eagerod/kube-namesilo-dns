@@ -161,6 +161,7 @@ func watchCommand() *cobra.Command {
 							return
 						}
 
+						log.Infof("Updating record %s", updateRecord.RecordId)
 						if err := api.UpdateDNSRecord(*updateRecord); err != nil {
 							log.Error(err)
 						}
