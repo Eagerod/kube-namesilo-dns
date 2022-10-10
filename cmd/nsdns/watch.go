@@ -157,7 +157,7 @@ func watchCommand() *cobra.Command {
 
 						// Only update if something actionable changed.
 						updateRecord, err := RecordMatching(records, *record)
-						if record.Equals(updateRecord) {
+						if record.EqualsRecord(*updateRecord) {
 							return
 						}
 

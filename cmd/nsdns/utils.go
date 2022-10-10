@@ -78,7 +78,7 @@ func ReconcileRecords(existing, new []namesilo_api.ResourceRecord) RecordReconci
 
 	for _, res := range new {
 		if r, ok := existingByHost[res.Host]; ok {
-			if r.Equals(res) {
+			if r.EqualsRecord(res) {
 				rr.NoOp = append(rr.NoOp, res)
 			} else {
 				if r.RecordId != "" {
@@ -96,7 +96,7 @@ func ReconcileRecords(existing, new []namesilo_api.ResourceRecord) RecordReconci
 
 func RecordMatching(records []namesilo_api.ResourceRecord, record namesilo_api.ResourceRecord) (*namesilo_api.ResourceRecord, error) {
 	for _, r := range records {
-		if record.Equals(r) {
+		if record.EqualsRecord(r) {
 			if r.RecordId != "" {
 				record.RecordId = r.RecordId
 			}
