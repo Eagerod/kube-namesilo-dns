@@ -114,7 +114,6 @@ func (ns *NamesiloApi) UpdateDNSRecord(rr ResourceRecord) error {
 	return nil
 }
 
-
 // Adds a resource record to a Namesilo Domain.
 func (ns *NamesiloApi) AddDNSRecord(rr ResourceRecord) error {
 	if rr.Host == ns.domain {
