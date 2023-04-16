@@ -20,9 +20,15 @@ jobs:
     - name: Install Staticcheck
       run: go install honnef.co/go/tools/cmd/staticcheck@v0.4.3
 
+    - name: Install Dependencies
+      rune: go mod download
+
     - name: Lint
       run: |
-        test -n "$(make fmt)" && echo >&2 "Linting failed" && exit 1
+        if [ -n "$(make fmt)" ]; then
+          echo >&2 "Linting failed. Fix files listed above."
+          exit 1
+        fi
 
     - name: Test
       run: make test
