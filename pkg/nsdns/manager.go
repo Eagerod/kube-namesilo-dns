@@ -6,8 +6,8 @@ import (
 )
 
 import (
-	apinetworkingv1 "k8s.io/api/networking/v1"
 	log "github.com/sirupsen/logrus"
+	apinetworkingv1 "k8s.io/api/networking/v1"
 )
 
 import (

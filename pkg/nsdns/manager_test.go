@@ -10,6 +10,28 @@ import (
 	apinetworkingv1 "k8s.io/api/networking/v1"
 )
 
+import (
+	"github.com/Eagerod/kube-namesilo-dns/pkg/namesilo_api"
+)
+
+type MockNamesiloApi struct{}
+
+func (nsapi MockNamesiloApi) ListDNSRecords() ([]namesilo_api.ResourceRecord, error) {
+	return []namesilo_api.ResourceRecord{}, nil
+}
+
+func (nsapi MockNamesiloApi) UpdateDNSRecord(rr namesilo_api.ResourceRecord) error {
+	return nil
+}
+
+func (nsapi MockNamesiloApi) AddDNSRecord(rr namesilo_api.ResourceRecord) error {
+	return nil
+}
+
+func (nsapi MockNamesiloApi) DeleteDNSRecord(rr namesilo_api.ResourceRecord) error {
+	return nil
+}
+
 func TestNewDnsManager(t *testing.T) {
 	ov := os.Getenv("NAMESILO_API_KEY")
 	os.Setenv("NAMESILO_API_KEY", "a")
@@ -56,26 +78,75 @@ func TestShouldProcessIngress(t *testing.T) {
 	assert.False(t, dm.ShouldProcessIngress(&ingress))
 }
 
+// This technically only provides coverage, without actually testing much.
 func TestHandleIngressExists(t *testing.T) {
-	dm, err := NewDnsManagerWithApiKey("a", "b", "c")
+	dm, err := NewDnsManagerWithApiKey("example.com", "b", "c")
 	assert.NoError(t, err)
 
+	dm.Api = MockNamesiloApi{}
 	cache := NewDnsManagerCache()
+	cache.CurrentIpAddress = "1.1.1.1"
 
 	ingress := apinetworkingv1.Ingress{}
 	ingress.Annotations = map[string]string{}
+	ingress.Annotations["kubernetes.io/ingress.class"] = dm.TargetIngressClass
+	ingress.Spec.Rules = append(ingress.Spec.Rules, apinetworkingv1.IngressRule{})
+	ingress.Spec.Rules[0].Host = "example.com"
+
+	// Create
+	assert.Nil(t, dm.HandleIngressExists(&ingress, cache))
+
+	rr := namesilo_api.ResourceRecord{
+		RecordId: "1234",
+		Type:     "A",
+		Host:     "example.com",
+		Value:    "1.1.1.1",
+		TTL:      7207,
+		Distance: 0,
+	}
+	cache.CurrentRecords = append(cache.CurrentRecords, rr)
+
+	// No op
+	assert.Nil(t, dm.HandleIngressExists(&ingress, cache))
+
+	cache.CurrentRecords[0].Value = "1.1.1.2"
+
+	// Update
+	assert.Nil(t, dm.HandleIngressExists(&ingress, cache))
+
 	ingress.Annotations["kubernetes.io/ingress.class"] = dm.TargetIngressClass + "not"
 
 	assert.Nil(t, dm.HandleIngressExists(&ingress, cache))
 }
 
 func TestHandleIngressDeleted(t *testing.T) {
-	dm, err := NewDnsManagerWithApiKey("a", "b", "c")
+	dm, err := NewDnsManagerWithApiKey("example.com", "b", "c")
 	assert.NoError(t, err)
 
+	dm.Api = MockNamesiloApi{}
 	cache := NewDnsManagerCache()
 
 	ingress := apinetworkingv1.Ingress{}
+	ingress.Annotations = map[string]string{}
+	ingress.Annotations["kubernetes.io/ingress.class"] = dm.TargetIngressClass
+	ingress.Spec.Rules = append(ingress.Spec.Rules, apinetworkingv1.IngressRule{})
+	ingress.Spec.Rules[0].Host = "example.com"
+
+	err = dm.HandleIngressDeleted(&ingress, cache)
+	assert.Equal(t, "failed to find record: A:example.com", err.Error())
+
+	rr := namesilo_api.ResourceRecord{
+		RecordId: "1234",
+		Type:     "A",
+		Host:     "example.com",
+		Value:    "1.1.1.1",
+		TTL:      7207,
+		Distance: 0,
+	}
+	cache.CurrentRecords = append(cache.CurrentRecords, rr)
+	assert.Nil(t, dm.HandleIngressDeleted(&ingress, cache))
+
+	ingress = apinetworkingv1.Ingress{}
 	ingress.Annotations = map[string]string{}
 	ingress.Annotations["kubernetes.io/ingress.class"] = dm.TargetIngressClass + "not"
 
