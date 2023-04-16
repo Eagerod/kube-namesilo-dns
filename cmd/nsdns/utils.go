@@ -44,7 +44,7 @@ func GetResourcesFromKubernetesIngresses(domainName, ip, ingressClass string) ([
 	}
 
 	for _, item := range items.Items {
-		if ShouldProcessIngress(ingressClass, &item) {
+		if !ShouldProcessIngress(ingressClass, &item) {
 			log.Debugf("Skipping ingress %s because it has incorrect ingress class", item.ObjectMeta.Name)
 			continue
 		}
