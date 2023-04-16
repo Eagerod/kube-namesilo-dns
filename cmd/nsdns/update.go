@@ -24,14 +24,7 @@ func updateCommand() *cobra.Command {
 				return err
 			}
 
-			dmCache := nsdns.NewDnsManagerCache()
-			if err := nsdns.UpdateCachedRecords(dmCache, dm.Api); err != nil {
-				return err
-			}
-
-			log.Debugf("Received %d records from Namesilo", len(dmCache.CurrentRecords))
-
-			if err := nsdns.UpdateIpAddress(dmCache); err != nil {
+			if err := dm.UpdateCache(); err != nil {
 				return err
 			}
 
@@ -41,7 +34,7 @@ func updateCommand() *cobra.Command {
 			}
 
 			for _, i := range ingresses {
-				if err := dm.HandleIngressExists(&i, dmCache); err != nil {
+				if err := dm.HandleIngressExists(&i); err != nil {
 					return err
 				}
 			}

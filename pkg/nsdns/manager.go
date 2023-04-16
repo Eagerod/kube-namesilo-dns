@@ -3,6 +3,7 @@ package nsdns
 import (
 	"fmt"
 	"os"
+	"sync"
 )
 
 import (
@@ -19,6 +20,9 @@ type DnsManager struct {
 	TargetIngressClass string
 
 	Api namesilo_api.NamesiloApi
+
+	cacheLock *sync.Mutex
+	cache *DnsManagerCache
 }
 
 func NewDnsManager(domainName, ingressClass string) (*DnsManager, error) {
@@ -45,6 +49,8 @@ func NewDnsManagerWithApiKey(domainName, ingressClass, apiKey string) (*DnsManag
 		domainName,
 		ingressClass,
 		api,
+		&sync.Mutex{},
+		NewDnsManagerCache(),
 	}
 
 	return &dm, nil
@@ -59,17 +65,17 @@ func (dm *DnsManager) ShouldProcessIngress(ingress *apinetworkingv1.Ingress) boo
 	return ic == dm.TargetIngressClass
 }
 
-func (dm *DnsManager) HandleIngressExists(ingress *apinetworkingv1.Ingress, cache *DnsManagerCache) error {
+func (dm *DnsManager) HandleIngressExists(ingress *apinetworkingv1.Ingress) error {
 	if !dm.ShouldProcessIngress(ingress) {
 		return nil
 	}
 
-	record, err := NamesiloRecordFromIngress(ingress, dm.BareDomainName, cache.CurrentIpAddress)
+	record, err := NamesiloRecordFromIngress(ingress, dm.BareDomainName, dm.cache.CurrentIpAddress)
 	if err != nil {
 		return err
 	}
 
-	for _, r := range cache.CurrentRecords {
+	for _, r := range dm.cache.CurrentRecords {
 		if record.Type == r.Type && record.Host == r.Host {
 			if record.EqualsRecord(r) {
 				log.Debugf("Record %s:%s already up to date", record.Type, record.Host)
@@ -78,30 +84,58 @@ func (dm *DnsManager) HandleIngressExists(ingress *apinetworkingv1.Ingress, cach
 
 			record.RecordId = r.RecordId
 			log.Debugf("Updating record %s:%s with value %s", record.Type, record.Host, record.Value)
-			return dm.Api.UpdateDNSRecord(*record)
+			if err := dm.Api.UpdateDNSRecord(*record); err != nil {
+				return err
+			}
+
+			return dm.UpdateCache()
 		}
 	}
 
 	log.Debugf("Creating new record %s:%s with value %s", record.Type, record.Host, record.Value)
-	return dm.Api.AddDNSRecord(*record)
+	if err := dm.Api.AddDNSRecord(*record); err != nil {
+		return err
+	}
+	return dm.UpdateCache()
 }
 
-func (dm *DnsManager) HandleIngressDeleted(ingress *apinetworkingv1.Ingress, cache *DnsManagerCache) error {
+func (dm *DnsManager) HandleIngressDeleted(ingress *apinetworkingv1.Ingress) error {
 	if !dm.ShouldProcessIngress(ingress) {
 		return nil
 	}
 
-	record, err := NamesiloRecordFromIngress(ingress, dm.BareDomainName, cache.CurrentIpAddress)
+	record, err := NamesiloRecordFromIngress(ingress, dm.BareDomainName, dm.cache.CurrentIpAddress)
 	if err != nil {
 		return err
 	}
 
-	for _, r := range cache.CurrentRecords {
+	for _, r := range dm.cache.CurrentRecords {
 		if record.Type == r.Type && record.Host == r.Host {
 			log.Infof("Deleting resource record %s", r.RecordId)
-			return dm.Api.DeleteDNSRecord(r)
+			if err := dm.Api.DeleteDNSRecord(r); err != nil {
+				return err
+			}
+
+			return dm.UpdateCache()
 		}
 	}
 
 	return fmt.Errorf("failed to find record: %s:%s", record.Type, record.Host)
+}
+
+func (dm *DnsManager) UpdateCache() error {
+	dm.cacheLock.Lock()
+	defer dm.cacheLock.Unlock()
+
+	if err := UpdateCachedRecords(dm.cache, dm.Api); err != nil {
+		return err
+	}
+
+	log.Debugf("Received %d records from Namesilo", len(dm.cache.CurrentRecords))
+
+	if err := UpdateIpAddress(dm.cache); err != nil {
+		return err
+	}
+
+	return nil
 }

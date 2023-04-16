@@ -3,7 +3,6 @@ package cmd
 import (
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 )
@@ -35,33 +34,13 @@ func watchCommand() *cobra.Command {
 				return err
 			}
 
-			dmCache := nsdns.NewDnsManagerCache()
-
-			rrMutex := sync.RWMutex{}
-			refreshState := func() error {
-				rrMutex.Lock()
-				defer rrMutex.Unlock()
-
-				if err := nsdns.UpdateCachedRecords(dmCache, dm.Api); err != nil {
-					return err
-				}
-
-				if err := nsdns.UpdateIpAddress(dmCache); err != nil {
-					return err
-				}
-
-				log.Debug("Updated local resource records and IP address")
-
-				return nil
-			}
-
-			if err := refreshState(); err != nil {
+			if err := dm.UpdateCache(); err != nil {
 				return err
 			}
 
 			go func() {
 				for range time.Tick(time.Hour) {
-					if err := refreshState(); err != nil {
+					if err := dm.UpdateCache(); err != nil {
 						panic(err)
 					}
 				}
@@ -79,36 +58,21 @@ func watchCommand() *cobra.Command {
 					AddFunc: func(obj interface{}) {
 						ingress := obj.(*networkingv1.Ingress)
 
-						if err := dm.HandleIngressExists(ingress, dmCache); err != nil {
-							log.Error(err)
-							return
-						}
-
-						if err := refreshState(); err != nil {
+						if err := dm.HandleIngressExists(ingress); err != nil {
 							log.Error(err)
 						}
 					},
 					DeleteFunc: func(obj interface{}) {
 						ingress := obj.(*networkingv1.Ingress)
 
-						if err := dm.HandleIngressDeleted(ingress, dmCache); err != nil {
-							log.Error(err)
-							return
-						}
-
-						if err := refreshState(); err != nil {
+						if err := dm.HandleIngressDeleted(ingress); err != nil {
 							log.Error(err)
 						}
 					},
 					UpdateFunc: func(old, new interface{}) {
 						ingress := new.(*networkingv1.Ingress)
 
-						if err := dm.HandleIngressExists(ingress, dmCache); err != nil {
-							log.Error(err)
-							return
-						}
-
-						if err := refreshState(); err != nil {
+						if err := dm.HandleIngressExists(ingress); err != nil {
 							log.Error(err)
 						}
 					},

@@ -84,8 +84,7 @@ func TestHandleIngressExists(t *testing.T) {
 	assert.NoError(t, err)
 
 	dm.Api = MockNamesiloApi{}
-	cache := NewDnsManagerCache()
-	cache.CurrentIpAddress = "1.1.1.1"
+	dm.cache.CurrentIpAddress = "1.1.1.1"
 
 	ingress := apinetworkingv1.Ingress{}
 	ingress.Annotations = map[string]string{}
@@ -94,7 +93,7 @@ func TestHandleIngressExists(t *testing.T) {
 	ingress.Spec.Rules[0].Host = "example.com"
 
 	// Create
-	assert.Nil(t, dm.HandleIngressExists(&ingress, cache))
+	assert.Nil(t, dm.HandleIngressExists(&ingress))
 
 	rr := namesilo_api.ResourceRecord{
 		RecordId: "1234",
@@ -104,19 +103,21 @@ func TestHandleIngressExists(t *testing.T) {
 		TTL:      7207,
 		Distance: 0,
 	}
-	cache.CurrentRecords = append(cache.CurrentRecords, rr)
+	dm.cache.CurrentRecords = append(dm.cache.CurrentRecords, rr)
 
 	// No op
-	assert.Nil(t, dm.HandleIngressExists(&ingress, cache))
+	assert.Nil(t, dm.HandleIngressExists(&ingress))
 
-	cache.CurrentRecords[0].Value = "1.1.1.2"
+	dm.cache.CurrentRecords = append(dm.cache.CurrentRecords, rr)
+	dm.cache.CurrentRecords[0].Value = "1.1.1.2"
 
 	// Update
-	assert.Nil(t, dm.HandleIngressExists(&ingress, cache))
+	assert.Nil(t, dm.HandleIngressExists(&ingress))
 
+	dm.cache.CurrentRecords = append(dm.cache.CurrentRecords, rr)
 	ingress.Annotations["kubernetes.io/ingress.class"] = dm.TargetIngressClass + "not"
 
-	assert.Nil(t, dm.HandleIngressExists(&ingress, cache))
+	assert.Nil(t, dm.HandleIngressExists(&ingress))
 }
 
 func TestHandleIngressDeleted(t *testing.T) {
@@ -124,7 +125,6 @@ func TestHandleIngressDeleted(t *testing.T) {
 	assert.NoError(t, err)
 
 	dm.Api = MockNamesiloApi{}
-	cache := NewDnsManagerCache()
 
 	ingress := apinetworkingv1.Ingress{}
 	ingress.Annotations = map[string]string{}
@@ -132,7 +132,7 @@ func TestHandleIngressDeleted(t *testing.T) {
 	ingress.Spec.Rules = append(ingress.Spec.Rules, apinetworkingv1.IngressRule{})
 	ingress.Spec.Rules[0].Host = "example.com"
 
-	err = dm.HandleIngressDeleted(&ingress, cache)
+	err = dm.HandleIngressDeleted(&ingress)
 	assert.Equal(t, "failed to find record: A:example.com", err.Error())
 
 	rr := namesilo_api.ResourceRecord{
@@ -143,12 +143,12 @@ func TestHandleIngressDeleted(t *testing.T) {
 		TTL:      7207,
 		Distance: 0,
 	}
-	cache.CurrentRecords = append(cache.CurrentRecords, rr)
-	assert.Nil(t, dm.HandleIngressDeleted(&ingress, cache))
+	dm.cache.CurrentRecords = append(dm.cache.CurrentRecords, rr)
+	assert.Nil(t, dm.HandleIngressDeleted(&ingress))
 
 	ingress = apinetworkingv1.Ingress{}
 	ingress.Annotations = map[string]string{}
 	ingress.Annotations["kubernetes.io/ingress.class"] = dm.TargetIngressClass + "not"
 
-	assert.Nil(t, dm.HandleIngressDeleted(&ingress, cache))
+	assert.Nil(t, dm.HandleIngressDeleted(&ingress))
 }
