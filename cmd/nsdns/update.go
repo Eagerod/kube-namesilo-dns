@@ -13,6 +13,7 @@ import (
 import (
 	"github.com/Eagerod/kube-namesilo-dns/pkg/icanhazip"
 	"github.com/Eagerod/kube-namesilo-dns/pkg/namesilo_api"
+	"github.com/Eagerod/kube-namesilo-dns/pkg/nsdns"
 )
 
 func updateCommand() *cobra.Command {
@@ -25,12 +26,9 @@ func updateCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.SetLevel(log.DebugLevel)
 
-			if domainName == "" {
-				return fmt.Errorf("must provide a domain name to update DNS records")
-			}
-
-			if ingressClass == "" {
-				return fmt.Errorf("must provide an ingress class to select DNS records")
+			dm, err := nsdns.NewDnsManager(domainName, ingressClass)
+			if err != nil {
+				return err
 			}
 
 			nsApiKey := os.Getenv("NAMESILO_API_KEY")
@@ -38,7 +36,7 @@ func updateCommand() *cobra.Command {
 				return fmt.Errorf("failed to find NAMESILO_API_KEY in environment; cannot proceed")
 			}
 
-			api := namesilo_api.NewNamesiloApi(domainName, nsApiKey)
+			api := namesilo_api.NewNamesiloApi(dm.BareDomainName, nsApiKey)
 
 			records, err := api.ListDNSRecords()
 			if err != nil {
@@ -52,7 +50,7 @@ func updateCommand() *cobra.Command {
 				return err
 			}
 
-			ingressRecords, err := GetResourcesFromKubernetesIngresses(domainName, ip, ingressClass)
+			ingressRecords, err := GetResourcesFromKubernetesIngresses(dm.BareDomainName, ip, dm.TargetIngressClass)
 			if err != nil {
 				return err
 			}
@@ -79,7 +77,7 @@ func updateCommand() *cobra.Command {
 						return err
 					}
 				case "CNAME":
-					if err := updateRecordIfNeeded(api, record, domainName); err != nil {
+					if err := updateRecordIfNeeded(api, record, dm.BareDomainName); err != nil {
 						return err
 					}
 				default:

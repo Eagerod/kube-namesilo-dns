@@ -33,12 +33,9 @@ func watchCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.SetLevel(log.DebugLevel)
 
-			if domainName == "" {
-				return fmt.Errorf("must provide a domain name to update DNS records")
-			}
-
-			if ingressClass == "" {
-				return fmt.Errorf("must provide an ingress class to select DNS records")
+			dm, err := nsdns.NewDnsManager(domainName, ingressClass)
+			if err != nil {
+				return err
 			}
 
 			nsApiKey := os.Getenv("NAMESILO_API_KEY")
@@ -46,7 +43,7 @@ func watchCommand() *cobra.Command {
 				return fmt.Errorf("failed to find NAMESILO_API_KEY in environment; cannot proceed")
 			}
 
-			api := namesilo_api.NewNamesiloApi(domainName, nsApiKey)
+			api := namesilo_api.NewNamesiloApi(dm.BareDomainName, nsApiKey)
 
 			rrMutex := sync.RWMutex{}
 			var records []namesilo_api.ResourceRecord
@@ -94,11 +91,11 @@ func watchCommand() *cobra.Command {
 				cache.ResourceEventHandlerFuncs{
 					AddFunc: func(obj interface{}) {
 						ingress := obj.(*networkingv1.Ingress)
-						if !ShouldProcessIngress(ingressClass, ingress) {
+						if !ShouldProcessIngress(dm.TargetIngressClass, ingress) {
 							return
 						}
 
-						record, err := nsdns.NamesiloRecordFromIngress(ingress, domainName, ip)
+						record, err := nsdns.NamesiloRecordFromIngress(ingress, dm.BareDomainName, ip)
 						if err != nil {
 							log.Error(err)
 							return
@@ -120,11 +117,11 @@ func watchCommand() *cobra.Command {
 					},
 					DeleteFunc: func(obj interface{}) {
 						ingress := obj.(*networkingv1.Ingress)
-						if !ShouldProcessIngress(ingressClass, ingress) {
+						if !ShouldProcessIngress(dm.TargetIngressClass, ingress) {
 							return
 						}
 
-						record, err := nsdns.NamesiloRecordFromIngress(ingress, domainName, ip)
+						record, err := nsdns.NamesiloRecordFromIngress(ingress, dm.BareDomainName, ip)
 						if err != nil {
 							log.Error(err)
 							return
@@ -145,11 +142,11 @@ func watchCommand() *cobra.Command {
 					},
 					UpdateFunc: func(old, new interface{}) {
 						ingress := new.(*networkingv1.Ingress)
-						if !ShouldProcessIngress(ingressClass, ingress) {
+						if !ShouldProcessIngress(dm.TargetIngressClass, ingress) {
 							return
 						}
 
-						record, err := nsdns.NamesiloRecordFromIngress(ingress, domainName, ip)
+						record, err := nsdns.NamesiloRecordFromIngress(ingress, dm.BareDomainName, ip)
 						if err != nil {
 							log.Error(err)
 							return
