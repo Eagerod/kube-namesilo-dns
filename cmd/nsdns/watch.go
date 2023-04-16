@@ -91,21 +91,8 @@ func watchCommand() *cobra.Command {
 					},
 					DeleteFunc: func(obj interface{}) {
 						ingress := obj.(*networkingv1.Ingress)
-						if !dm.ShouldProcessIngress(ingress) {
-							return
-						}
 
-						record, err := nsdns.NamesiloRecordFromIngress(ingress, dm.BareDomainName, dmCache.CurrentIpAddress)
-						if err != nil {
-							log.Error(err)
-							return
-						}
-
-						deleteRecord, _ := RecordMatching(dmCache.CurrentRecords, *record)
-
-						log.Infof("Deleting resource record %s", deleteRecord.RecordId)
-						err = dm.Api.DeleteDNSRecord(*deleteRecord)
-						if err != nil {
+						if err := dm.HandleIngressDeleted(ingress, dmCache); err != nil {
 							log.Error(err)
 							return
 						}

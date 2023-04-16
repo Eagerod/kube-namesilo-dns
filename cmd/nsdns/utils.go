@@ -47,19 +47,6 @@ func GetIngresses(namespace string) ([]apinetworkingv1.Ingress, error) {
 	return rv, nil
 }
 
-func RecordMatching(records []namesilo_api.ResourceRecord, record namesilo_api.ResourceRecord) (*namesilo_api.ResourceRecord, error) {
-	for _, r := range records {
-		if record.EqualsRecord(r) {
-			if r.RecordId != "" {
-				record.RecordId = r.RecordId
-			}
-			return &record, nil
-		}
-	}
-
-	return nil, nil
-}
-
 func GetKubernetesClientSet() (*kubernetes.Clientset, error) {
 	if config, err := rest.InClusterConfig(); err == nil {
 		return kubernetes.NewForConfig(config)

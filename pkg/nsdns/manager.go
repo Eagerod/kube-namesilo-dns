@@ -85,3 +85,23 @@ func (dm *DnsManager) HandleIngressExists(ingress *apinetworkingv1.Ingress, cach
 	log.Debugf("Creating new record %s:%s with value %s", record.Type, record.Host, record.Value)
 	return dm.Api.AddDNSRecord(*record)
 }
+
+func (dm *DnsManager) HandleIngressDeleted(ingress *apinetworkingv1.Ingress, cache *DnsManagerCache) error {
+	if !dm.ShouldProcessIngress(ingress) {
+		return nil
+	}
+
+	record, err := NamesiloRecordFromIngress(ingress, dm.BareDomainName, cache.CurrentIpAddress)
+	if err != nil {
+		return err
+	}
+
+	for _, r := range cache.CurrentRecords {
+		if record.Type == r.Type && record.Host == r.Host {
+			log.Infof("Deleting resource record %s", r.RecordId)
+			return dm.Api.DeleteDNSRecord(r)
+		}
+	}
+
+	return fmt.Errorf("failed to find record: %s:%s", record.Type, record.Host)
+}
