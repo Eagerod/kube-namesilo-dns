@@ -91,7 +91,7 @@ func watchCommand() *cobra.Command {
 				cache.ResourceEventHandlerFuncs{
 					AddFunc: func(obj interface{}) {
 						ingress := obj.(*networkingv1.Ingress)
-						if !ShouldProcessIngress(dm.TargetIngressClass, ingress) {
+						if !dm.ShouldProcessIngress(ingress) {
 							return
 						}
 
@@ -117,7 +117,7 @@ func watchCommand() *cobra.Command {
 					},
 					DeleteFunc: func(obj interface{}) {
 						ingress := obj.(*networkingv1.Ingress)
-						if !ShouldProcessIngress(dm.TargetIngressClass, ingress) {
+						if !dm.ShouldProcessIngress(ingress) {
 							return
 						}
 
@@ -142,7 +142,7 @@ func watchCommand() *cobra.Command {
 					},
 					UpdateFunc: func(old, new interface{}) {
 						ingress := new.(*networkingv1.Ingress)
-						if !ShouldProcessIngress(dm.TargetIngressClass, ingress) {
+						if !dm.ShouldProcessIngress(ingress) {
 							return
 						}
 

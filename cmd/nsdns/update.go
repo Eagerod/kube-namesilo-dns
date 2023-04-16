@@ -50,7 +50,7 @@ func updateCommand() *cobra.Command {
 				return err
 			}
 
-			ingressRecords, err := GetResourcesFromKubernetesIngresses(dm.BareDomainName, ip, dm.TargetIngressClass)
+			ingressRecords, err := GetResourcesFromKubernetesIngresses(dm, ip)
 			if err != nil {
 				return err
 			}

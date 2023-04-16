@@ -4,8 +4,12 @@ import (
 	"fmt"
 )
 
+import (
+	apinetworkingv1 "k8s.io/api/networking/v1"
+)
+
 type DnsManager struct {
-	BareDomainName string
+	BareDomainName     string
 	TargetIngressClass string
 }
 
@@ -26,3 +30,11 @@ func NewDnsManager(domainName, ingressClass string) (*DnsManager, error) {
 	return &dm, nil
 }
 
+func (dm *DnsManager) ShouldProcessIngress(ingress *apinetworkingv1.Ingress) bool {
+	ic, ok := ingress.Annotations["kubernetes.io/ingress.class"]
+	if !ok {
+		return false
+	}
+
+	return ic == dm.TargetIngressClass
+}

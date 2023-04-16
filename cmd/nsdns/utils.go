@@ -11,7 +11,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -29,7 +28,7 @@ type RecordReconciliation struct {
 	NoOp   []namesilo_api.ResourceRecord
 }
 
-func GetResourcesFromKubernetesIngresses(domainName, ip, ingressClass string) ([]namesilo_api.ResourceRecord, error) {
+func GetResourcesFromKubernetesIngresses(domainManager *nsdns.DnsManager, ip string) ([]namesilo_api.ResourceRecord, error) {
 	rv := []namesilo_api.ResourceRecord{}
 
 	clientset, err := GetKubernetesClientSet()
@@ -44,12 +43,12 @@ func GetResourcesFromKubernetesIngresses(domainName, ip, ingressClass string) ([
 	}
 
 	for _, item := range items.Items {
-		if !ShouldProcessIngress(ingressClass, &item) {
+		if !domainManager.ShouldProcessIngress(&item) {
 			log.Debugf("Skipping ingress %s because it has incorrect ingress class", item.ObjectMeta.Name)
 			continue
 		}
 
-		nsrr, err := nsdns.NamesiloRecordFromIngress(&item, domainName, ip)
+		nsrr, err := nsdns.NamesiloRecordFromIngress(&item, domainManager.BareDomainName, ip)
 		if err != nil {
 			return rv, err
 		}
@@ -58,14 +57,6 @@ func GetResourcesFromKubernetesIngresses(domainName, ip, ingressClass string) ([
 	}
 
 	return rv, nil
-}
-
-func ShouldProcessIngress(desiredIngressClass string, ingress *networkingv1.Ingress) bool {
-	ic, ok := ingress.Annotations["kubernetes.io/ingress.class"]
-	if !ok {
-		return false
-	}
-	return ic == desiredIngressClass
 }
 
 func ReconcileRecords(existing, new []namesilo_api.ResourceRecord) RecordReconciliation {
