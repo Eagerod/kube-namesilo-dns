@@ -1,7 +1,7 @@
 package icanhazip
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -14,7 +14,7 @@ func GetPublicIP() (string, error) {
 		return "", err
 	}
 
-	body, err := ioutil.ReadAll(response.Body)
+	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		return "", err
 	}

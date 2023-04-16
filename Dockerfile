@@ -1,7 +1,11 @@
 
-FROM golang:1.18 AS builder
+FROM golang:1.19 AS builder
 
 WORKDIR /app
+
+RUN go install honnef.co/go/tools/cmd/staticcheck@v0.4.3
+
+ARG VERSION UnspecifiedContainerVersion
 
 COPY "go.mod" "go.sum" ./
 

@@ -34,16 +34,16 @@ func watchCommand() *cobra.Command {
 			log.SetLevel(log.DebugLevel)
 
 			if domainName == "" {
-				return fmt.Errorf("Must provide a domain name to update DNS records.")
+				return fmt.Errorf("must provide a domain name to update DNS records")
 			}
 
 			if ingressClass == "" {
-				return fmt.Errorf("Must provide an ingress class to select DNS records.")
+				return fmt.Errorf("must provide an ingress class to select DNS records")
 			}
 
 			nsApiKey := os.Getenv("NAMESILO_API_KEY")
 			if nsApiKey == "" {
-				return fmt.Errorf("Failed to find NAMESILO_API_KEY in environment. Cannot proceed.")
+				return fmt.Errorf("failed to find NAMESILO_API_KEY in environment; cannot proceed")
 			}
 
 			api := namesilo_api.NewNamesiloApi(domainName, nsApiKey)
@@ -104,7 +104,7 @@ func watchCommand() *cobra.Command {
 							return
 						}
 
-						existingRecord, err := RecordMatching(records, *record)
+						existingRecord, _ := RecordMatching(records, *record)
 						if existingRecord != nil {
 							return
 						}
@@ -130,7 +130,7 @@ func watchCommand() *cobra.Command {
 							return
 						}
 
-						deleteRecord, err := RecordMatching(records, *record)
+						deleteRecord, _ := RecordMatching(records, *record)
 
 						log.Infof("Deleting resource record %s", deleteRecord.RecordId)
 						err = api.DeleteDNSRecord(*deleteRecord)
@@ -156,7 +156,7 @@ func watchCommand() *cobra.Command {
 						}
 
 						// Only update if something actionable changed.
-						updateRecord, err := RecordMatching(records, *record)
+						updateRecord, _ := RecordMatching(records, *record)
 						if record.EqualsRecord(*updateRecord) {
 							return
 						}
