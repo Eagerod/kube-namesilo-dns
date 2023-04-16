@@ -7,6 +7,7 @@ import (
 
 import (
 	apinetworkingv1 "k8s.io/api/networking/v1"
+	log "github.com/sirupsen/logrus"
 )
 
 import (
@@ -56,4 +57,31 @@ func (dm *DnsManager) ShouldProcessIngress(ingress *apinetworkingv1.Ingress) boo
 	}
 
 	return ic == dm.TargetIngressClass
+}
+
+func (dm *DnsManager) HandleIngressExists(ingress *apinetworkingv1.Ingress, cache *DnsManagerCache) error {
+	if !dm.ShouldProcessIngress(ingress) {
+		return nil
+	}
+
+	record, err := NamesiloRecordFromIngress(ingress, dm.BareDomainName, cache.CurrentIpAddress)
+	if err != nil {
+		return err
+	}
+
+	for _, r := range cache.CurrentRecords {
+		if record.Type == r.Type && record.Host == r.Host {
+			if record.EqualsRecord(r) {
+				log.Debugf("Record %s:%s already up to date", record.Type, record.Host)
+				return nil
+			}
+
+			record.RecordId = r.RecordId
+			log.Debugf("Updating record %s:%s with value %s", record.Type, record.Host, record.Value)
+			return dm.Api.UpdateDNSRecord(*record)
+		}
+	}
+
+	log.Debugf("Creating new record %s:%s with value %s", record.Type, record.Host, record.Value)
+	return dm.Api.AddDNSRecord(*record)
 }

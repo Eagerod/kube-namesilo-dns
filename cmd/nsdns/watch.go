@@ -79,24 +79,10 @@ func watchCommand() *cobra.Command {
 				cache.ResourceEventHandlerFuncs{
 					AddFunc: func(obj interface{}) {
 						ingress := obj.(*networkingv1.Ingress)
-						if !dm.ShouldProcessIngress(ingress) {
-							return
-						}
 
-						record, err := nsdns.NamesiloRecordFromIngress(ingress, dm.BareDomainName, dmCache.CurrentIpAddress)
-						if err != nil {
+						if err := dm.HandleIngressExists(ingress, dmCache); err != nil {
 							log.Error(err)
 							return
-						}
-
-						existingRecord, _ := RecordMatching(dmCache.CurrentRecords, *record)
-						if existingRecord != nil {
-							return
-						}
-
-						log.Infof("Adding record for %s", record.Host)
-						if err := dm.Api.AddDNSRecord(*record); err != nil {
-							log.Error(err)
 						}
 
 						if err := refreshState(); err != nil {
@@ -130,25 +116,10 @@ func watchCommand() *cobra.Command {
 					},
 					UpdateFunc: func(old, new interface{}) {
 						ingress := new.(*networkingv1.Ingress)
-						if !dm.ShouldProcessIngress(ingress) {
-							return
-						}
 
-						record, err := nsdns.NamesiloRecordFromIngress(ingress, dm.BareDomainName, dmCache.CurrentIpAddress)
-						if err != nil {
+						if err := dm.HandleIngressExists(ingress, dmCache); err != nil {
 							log.Error(err)
 							return
-						}
-
-						// Only update if something actionable changed.
-						updateRecord, _ := RecordMatching(dmCache.CurrentRecords, *record)
-						if record.EqualsRecord(*updateRecord) {
-							return
-						}
-
-						log.Infof("Updating record %s", updateRecord.RecordId)
-						if err := dm.Api.UpdateDNSRecord(*updateRecord); err != nil {
-							log.Error(err)
 						}
 
 						if err := refreshState(); err != nil {
