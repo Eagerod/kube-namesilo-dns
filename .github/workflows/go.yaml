@@ -17,5 +17,9 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
 
+    - name: Lint
+      run: |
+        test -n "$(make fmt)" && echo >&2 "Linting failed" && exit 1
+
     - name: Test
       run: make test
