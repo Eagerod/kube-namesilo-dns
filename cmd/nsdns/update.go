@@ -6,7 +6,6 @@ import (
 )
 
 import (
-	"github.com/Eagerod/kube-namesilo-dns/pkg/icanhazip"
 	"github.com/Eagerod/kube-namesilo-dns/pkg/namesilo_api"
 	"github.com/Eagerod/kube-namesilo-dns/pkg/nsdns"
 )
@@ -26,26 +25,25 @@ func updateCommand() *cobra.Command {
 				return err
 			}
 
-			records, err := dm.Api.ListDNSRecords()
-			if err != nil {
+			dmCache := nsdns.NewDnsManagerCache()
+			if err := nsdns.UpdateCachedRecords(dmCache, dm.Api); err != nil {
 				return err
 			}
 
-			log.Debugf("Received %d records from Namesilo", len(records))
+			log.Debugf("Received %d records from Namesilo", len(dmCache.CurrentRecords))
 
-			ip, err := icanhazip.GetPublicIP()
-			if err != nil {
+			if err := nsdns.UpdateIpAddress(dmCache); err != nil {
 				return err
 			}
 
-			ingressRecords, err := GetResourcesFromKubernetesIngresses(dm, ip)
+			ingressRecords, err := GetResourcesFromKubernetesIngresses(dm, dmCache.CurrentIpAddress)
 			if err != nil {
 				return err
 			}
 
 			log.Debugf("Received %d records from Ingress objects", len(ingressRecords))
 
-			rr := ReconcileRecords(records, ingressRecords)
+			rr := ReconcileRecords(dmCache.CurrentRecords, ingressRecords)
 
 			for _, r := range rr.NoOp {
 				log.Infof("Skipping %s because it's already up to date.", r.Host)
@@ -61,7 +59,7 @@ func updateCommand() *cobra.Command {
 			for _, record := range rr.Update {
 				switch record.Type {
 				case "A":
-					if err := updateRecordIfNeeded(dm.Api, record, ip); err != nil {
+					if err := updateRecordIfNeeded(dm.Api, record, dmCache.CurrentIpAddress); err != nil {
 						return err
 					}
 				case "CNAME":

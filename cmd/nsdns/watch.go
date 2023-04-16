@@ -18,8 +18,6 @@ import (
 )
 
 import (
-	"github.com/Eagerod/kube-namesilo-dns/pkg/icanhazip"
-	"github.com/Eagerod/kube-namesilo-dns/pkg/namesilo_api"
 	"github.com/Eagerod/kube-namesilo-dns/pkg/nsdns"
 )
 
@@ -38,21 +36,18 @@ func watchCommand() *cobra.Command {
 				return err
 			}
 
-			rrMutex := sync.RWMutex{}
-			var records []namesilo_api.ResourceRecord
-			var ip string
+			dmCache := nsdns.NewDnsManagerCache()
 
+			rrMutex := sync.RWMutex{}
 			refreshState := func() error {
-				var err error
 				rrMutex.Lock()
 				defer rrMutex.Unlock()
 
-				records, err = dm.Api.ListDNSRecords()
-				if err != nil {
+				if err := nsdns.UpdateCachedRecords(dmCache, dm.Api); err != nil {
 					return err
 				}
-				ip, err = icanhazip.GetPublicIP()
-				if err != nil {
+
+				if err := nsdns.UpdateIpAddress(dmCache); err != nil {
 					return err
 				}
 
@@ -88,13 +83,13 @@ func watchCommand() *cobra.Command {
 							return
 						}
 
-						record, err := nsdns.NamesiloRecordFromIngress(ingress, dm.BareDomainName, ip)
+						record, err := nsdns.NamesiloRecordFromIngress(ingress, dm.BareDomainName, dmCache.CurrentIpAddress)
 						if err != nil {
 							log.Error(err)
 							return
 						}
 
-						existingRecord, _ := RecordMatching(records, *record)
+						existingRecord, _ := RecordMatching(dmCache.CurrentRecords, *record)
 						if existingRecord != nil {
 							return
 						}
@@ -114,13 +109,13 @@ func watchCommand() *cobra.Command {
 							return
 						}
 
-						record, err := nsdns.NamesiloRecordFromIngress(ingress, dm.BareDomainName, ip)
+						record, err := nsdns.NamesiloRecordFromIngress(ingress, dm.BareDomainName, dmCache.CurrentIpAddress)
 						if err != nil {
 							log.Error(err)
 							return
 						}
 
-						deleteRecord, _ := RecordMatching(records, *record)
+						deleteRecord, _ := RecordMatching(dmCache.CurrentRecords, *record)
 
 						log.Infof("Deleting resource record %s", deleteRecord.RecordId)
 						err = dm.Api.DeleteDNSRecord(*deleteRecord)
@@ -139,14 +134,14 @@ func watchCommand() *cobra.Command {
 							return
 						}
 
-						record, err := nsdns.NamesiloRecordFromIngress(ingress, dm.BareDomainName, ip)
+						record, err := nsdns.NamesiloRecordFromIngress(ingress, dm.BareDomainName, dmCache.CurrentIpAddress)
 						if err != nil {
 							log.Error(err)
 							return
 						}
 
 						// Only update if something actionable changed.
-						updateRecord, _ := RecordMatching(records, *record)
+						updateRecord, _ := RecordMatching(dmCache.CurrentRecords, *record)
 						if record.EqualsRecord(*updateRecord) {
 							return
 						}
