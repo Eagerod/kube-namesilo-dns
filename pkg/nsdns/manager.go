@@ -12,8 +12,21 @@ import (
 )
 
 import (
+	"github.com/Eagerod/kube-namesilo-dns/pkg/icanhazip"
 	"github.com/Eagerod/kube-namesilo-dns/pkg/namesilo_api"
 )
+
+type dnsManagerCache struct {
+	CurrentRecords   []namesilo_api.ResourceRecord
+	CurrentIpAddress string
+}
+
+func NewDnsManagerCache() *dnsManagerCache {
+	return &dnsManagerCache{
+		[]namesilo_api.ResourceRecord{},
+		"",
+	}
+}
 
 type DnsManager struct {
 	BareDomainName     string
@@ -127,15 +140,20 @@ func (dm *DnsManager) UpdateCache() error {
 	dm.cacheLock.Lock()
 	defer dm.cacheLock.Unlock()
 
-	if err := UpdateCachedRecords(dm.cache, dm.Api); err != nil {
+	records, err := dm.Api.ListDNSRecords()
+	if err != nil {
 		return err
 	}
 
+	dm.cache.CurrentRecords = records
 	log.Debugf("Received %d records from Namesilo", len(dm.cache.CurrentRecords))
 
-	if err := UpdateIpAddress(dm.cache); err != nil {
+	ip, err := icanhazip.GetPublicIP()
+	if err != nil {
 		return err
 	}
+
+	dm.cache.CurrentIpAddress = ip
 
 	return nil
 }
