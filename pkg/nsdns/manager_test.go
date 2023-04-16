@@ -55,3 +55,29 @@ func TestShouldProcessIngress(t *testing.T) {
 
 	assert.False(t, dm.ShouldProcessIngress(&ingress))
 }
+
+func TestHandleIngressExists(t *testing.T) {
+	dm, err := NewDnsManagerWithApiKey("a", "b", "c")
+	assert.NoError(t, err)
+
+	cache := NewDnsManagerCache()
+
+	ingress := apinetworkingv1.Ingress{}
+	ingress.Annotations = map[string]string{}
+	ingress.Annotations["kubernetes.io/ingress.class"] = dm.TargetIngressClass + "not"
+
+	assert.Nil(t, dm.HandleIngressExists(&ingress, cache))
+}
+
+func TestHandleIngressDeleted(t *testing.T) {
+	dm, err := NewDnsManagerWithApiKey("a", "b", "c")
+	assert.NoError(t, err)
+
+	cache := NewDnsManagerCache()
+
+	ingress := apinetworkingv1.Ingress{}
+	ingress.Annotations = map[string]string{}
+	ingress.Annotations["kubernetes.io/ingress.class"] = dm.TargetIngressClass + "not"
+
+	assert.Nil(t, dm.HandleIngressDeleted(&ingress, cache))
+}
