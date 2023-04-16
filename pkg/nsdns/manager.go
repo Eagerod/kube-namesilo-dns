@@ -34,8 +34,9 @@ type DnsManager struct {
 
 	Api namesilo_api.NamesiloApi
 
-	cacheLock *sync.Mutex
-	cache     *DnsManagerCache
+	cacheLock              *sync.Mutex
+	cache                  *dnsManagerCache
+	RefreshesCacheOnUpdate bool
 }
 
 func NewDnsManager(domainName, ingressClass string) (*DnsManager, error) {
@@ -64,6 +65,7 @@ func NewDnsManagerWithApiKey(domainName, ingressClass, apiKey string) (*DnsManag
 		api,
 		&sync.Mutex{},
 		NewDnsManagerCache(),
+		false,
 	}
 
 	return &dm, nil
@@ -101,7 +103,7 @@ func (dm *DnsManager) HandleIngressExists(ingress *apinetworkingv1.Ingress) erro
 				return err
 			}
 
-			return dm.UpdateCache()
+			return dm.autoupdateCache()
 		}
 	}
 
@@ -109,7 +111,7 @@ func (dm *DnsManager) HandleIngressExists(ingress *apinetworkingv1.Ingress) erro
 	if err := dm.Api.AddDNSRecord(*record); err != nil {
 		return err
 	}
-	return dm.UpdateCache()
+	return dm.autoupdateCache()
 }
 
 func (dm *DnsManager) HandleIngressDeleted(ingress *apinetworkingv1.Ingress) error {
@@ -129,11 +131,19 @@ func (dm *DnsManager) HandleIngressDeleted(ingress *apinetworkingv1.Ingress) err
 				return err
 			}
 
-			return dm.UpdateCache()
+			return dm.autoupdateCache()
 		}
 	}
 
 	return fmt.Errorf("failed to find record: %s:%s", record.Type, record.Host)
+}
+
+func (dm *DnsManager) autoupdateCache() error {
+	if !dm.RefreshesCacheOnUpdate {
+		return nil
+	}
+
+	return dm.UpdateCache()
 }
 
 func (dm *DnsManager) UpdateCache() error {

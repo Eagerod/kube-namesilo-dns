@@ -34,6 +34,7 @@ func watchCommand() *cobra.Command {
 				return err
 			}
 
+			dm.RefreshesCacheOnUpdate = true
 			if err := dm.UpdateCache(); err != nil {
 				return err
 			}
