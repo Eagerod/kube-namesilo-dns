@@ -13,7 +13,14 @@ import (
 
 const DefaultApiURLPrefix string = "https://www.namesilo.com/api/"
 
-type NamesiloApi struct {
+type NamesiloApi interface {
+	ListDNSRecords() ([]ResourceRecord, error)
+	UpdateDNSRecord(rr ResourceRecord) error
+	AddDNSRecord(rr ResourceRecord) error
+	DeleteDNSRecord(rr ResourceRecord) error
+}
+
+type namesiloApi struct {
 	apiKey    string
 	apiPrefix string
 	domain    string
@@ -39,19 +46,19 @@ type DNSAddRecordsResponse struct {
 type DNSUpdateRecordsResponse DNSAddRecordsResponse
 type DNSDeleteRecordsResponse DNSAddRecordsResponse
 
-func NewNamesiloApi(domain, apiKey string) *NamesiloApi {
+func NewNamesiloApi(domain, apiKey string) NamesiloApi {
 	return NewNamesiloApiWithServer(domain, apiKey, DefaultApiURLPrefix)
 }
 
-func NewNamesiloApiWithServer(domain, apiKey, apiPrefix string) *NamesiloApi {
-	return &NamesiloApi{
+func NewNamesiloApiWithServer(domain, apiKey, apiPrefix string) NamesiloApi {
+	return &namesiloApi{
 		apiKey:    apiKey,
 		apiPrefix: apiPrefix,
 		domain:    domain,
 	}
 }
 
-func (ns *NamesiloApi) ListDNSRecords() ([]ResourceRecord, error) {
+func (ns *namesiloApi) ListDNSRecords() ([]ResourceRecord, error) {
 	reqValues := url.Values{}
 	reqUrl, err := ns.apiActionWithValues("dnsListRecords", &reqValues)
 	if err != nil {
@@ -68,7 +75,7 @@ func (ns *NamesiloApi) ListDNSRecords() ([]ResourceRecord, error) {
 	return ldrr.Reply.ResourceRecords, nil
 }
 
-func (ns *NamesiloApi) UpdateDNSRecord(rr ResourceRecord) error {
+func (ns *namesiloApi) UpdateDNSRecord(rr ResourceRecord) error {
 	if rr.RecordId == "" {
 		return errors.New("cannot update DNS record without record id")
 	}
@@ -105,7 +112,7 @@ func (ns *NamesiloApi) UpdateDNSRecord(rr ResourceRecord) error {
 }
 
 // Adds a resource record to a Namesilo Domain.
-func (ns *NamesiloApi) AddDNSRecord(rr ResourceRecord) error {
+func (ns *namesiloApi) AddDNSRecord(rr ResourceRecord) error {
 	if rr.Host == ns.domain {
 		rr.Host = ""
 	} else {
@@ -136,7 +143,7 @@ func (ns *NamesiloApi) AddDNSRecord(rr ResourceRecord) error {
 	return nil
 }
 
-func (ns *NamesiloApi) DeleteDNSRecord(rr ResourceRecord) error {
+func (ns *namesiloApi) DeleteDNSRecord(rr ResourceRecord) error {
 	if rr.RecordId == "" {
 		return errors.New("cannot delete DNS record without ID")
 	}
@@ -160,7 +167,7 @@ func (ns *NamesiloApi) DeleteDNSRecord(rr ResourceRecord) error {
 	return nil
 }
 
-func (ns *NamesiloApi) apiActionWithValues(action string, values *url.Values) (*url.URL, error) {
+func (ns *namesiloApi) apiActionWithValues(action string, values *url.Values) (*url.URL, error) {
 	reqUrl, err := url.Parse(fmt.Sprintf("%s/%s", ns.apiPrefix, action))
 	if err != nil {
 		return nil, err

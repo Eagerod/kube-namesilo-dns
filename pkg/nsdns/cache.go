@@ -19,7 +19,7 @@ func NewDnsManagerCache() *DnsManagerCache {
 
 // These aren't implemented as methods on the DnsManagerCache struct, because
 // they seem like the kinds of things it shouldn't know how to do on its own.
-func UpdateCachedRecords(cache *DnsManagerCache, api *namesilo_api.NamesiloApi) error {
+func UpdateCachedRecords(cache *DnsManagerCache, api namesilo_api.NamesiloApi) error {
 	records, err := api.ListDNSRecords()
 	if err != nil {
 		return err

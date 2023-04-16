@@ -18,7 +18,7 @@ type DnsManager struct {
 	BareDomainName     string
 	TargetIngressClass string
 
-	Api *namesilo_api.NamesiloApi
+	Api namesilo_api.NamesiloApi
 }
 
 func NewDnsManager(domainName, ingressClass string) (*DnsManager, error) {
