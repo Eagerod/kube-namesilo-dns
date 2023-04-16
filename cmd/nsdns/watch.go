@@ -38,13 +38,6 @@ func watchCommand() *cobra.Command {
 				return err
 			}
 
-			nsApiKey := os.Getenv("NAMESILO_API_KEY")
-			if nsApiKey == "" {
-				return fmt.Errorf("failed to find NAMESILO_API_KEY in environment; cannot proceed")
-			}
-
-			api := namesilo_api.NewNamesiloApi(dm.BareDomainName, nsApiKey)
-
 			rrMutex := sync.RWMutex{}
 			var records []namesilo_api.ResourceRecord
 			var ip string
@@ -54,7 +47,7 @@ func watchCommand() *cobra.Command {
 				rrMutex.Lock()
 				defer rrMutex.Unlock()
 
-				records, err = api.ListDNSRecords()
+				records, err = dm.Api.ListDNSRecords()
 				if err != nil {
 					return err
 				}
@@ -107,7 +100,7 @@ func watchCommand() *cobra.Command {
 						}
 
 						log.Infof("Adding record for %s", record.Host)
-						if err := api.AddDNSRecord(*record); err != nil {
+						if err := dm.Api.AddDNSRecord(*record); err != nil {
 							log.Error(err)
 						}
 
@@ -130,7 +123,7 @@ func watchCommand() *cobra.Command {
 						deleteRecord, _ := RecordMatching(records, *record)
 
 						log.Infof("Deleting resource record %s", deleteRecord.RecordId)
-						err = api.DeleteDNSRecord(*deleteRecord)
+						err = dm.Api.DeleteDNSRecord(*deleteRecord)
 						if err != nil {
 							log.Error(err)
 							return
@@ -159,7 +152,7 @@ func watchCommand() *cobra.Command {
 						}
 
 						log.Infof("Updating record %s", updateRecord.RecordId)
-						if err := api.UpdateDNSRecord(*updateRecord); err != nil {
+						if err := dm.Api.UpdateDNSRecord(*updateRecord); err != nil {
 							log.Error(err)
 						}
 

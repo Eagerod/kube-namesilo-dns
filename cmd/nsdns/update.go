@@ -1,11 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-	"os"
-)
-
-import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -31,14 +26,7 @@ func updateCommand() *cobra.Command {
 				return err
 			}
 
-			nsApiKey := os.Getenv("NAMESILO_API_KEY")
-			if nsApiKey == "" {
-				return fmt.Errorf("failed to find NAMESILO_API_KEY in environment; cannot proceed")
-			}
-
-			api := namesilo_api.NewNamesiloApi(dm.BareDomainName, nsApiKey)
-
-			records, err := api.ListDNSRecords()
+			records, err := dm.Api.ListDNSRecords()
 			if err != nil {
 				return err
 			}
@@ -65,7 +53,7 @@ func updateCommand() *cobra.Command {
 
 			for _, record := range rr.Add {
 				log.Infof("Adding record for %s", record.Host)
-				if err := api.AddDNSRecord(record); err != nil {
+				if err := dm.Api.AddDNSRecord(record); err != nil {
 					return err
 				}
 			}
@@ -73,11 +61,11 @@ func updateCommand() *cobra.Command {
 			for _, record := range rr.Update {
 				switch record.Type {
 				case "A":
-					if err := updateRecordIfNeeded(api, record, ip); err != nil {
+					if err := updateRecordIfNeeded(dm.Api, record, ip); err != nil {
 						return err
 					}
 				case "CNAME":
-					if err := updateRecordIfNeeded(api, record, dm.BareDomainName); err != nil {
+					if err := updateRecordIfNeeded(dm.Api, record, dm.BareDomainName); err != nil {
 						return err
 					}
 				default:
