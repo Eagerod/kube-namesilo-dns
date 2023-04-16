@@ -22,7 +22,7 @@ type DnsManager struct {
 	Api namesilo_api.NamesiloApi
 
 	cacheLock *sync.Mutex
-	cache *DnsManagerCache
+	cache     *DnsManagerCache
 }
 
 func NewDnsManager(domainName, ingressClass string) (*DnsManager, error) {
