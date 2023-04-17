@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 )
@@ -18,8 +16,6 @@ import (
 )
 
 import (
-	"github.com/Eagerod/kube-namesilo-dns/pkg/icanhazip"
-	"github.com/Eagerod/kube-namesilo-dns/pkg/namesilo_api"
 	"github.com/Eagerod/kube-namesilo-dns/pkg/nsdns"
 )
 
@@ -33,51 +29,19 @@ func watchCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.SetLevel(log.DebugLevel)
 
-			if domainName == "" {
-				return fmt.Errorf("must provide a domain name to update DNS records")
+			dm, err := nsdns.NewDnsManager(domainName, ingressClass)
+			if err != nil {
+				return err
 			}
 
-			if ingressClass == "" {
-				return fmt.Errorf("must provide an ingress class to select DNS records")
-			}
-
-			nsApiKey := os.Getenv("NAMESILO_API_KEY")
-			if nsApiKey == "" {
-				return fmt.Errorf("failed to find NAMESILO_API_KEY in environment; cannot proceed")
-			}
-
-			api := namesilo_api.NewNamesiloApi(domainName, nsApiKey)
-
-			rrMutex := sync.RWMutex{}
-			var records []namesilo_api.ResourceRecord
-			var ip string
-
-			refreshState := func() error {
-				var err error
-				rrMutex.Lock()
-				defer rrMutex.Unlock()
-
-				records, err = api.ListDNSRecords()
-				if err != nil {
-					return err
-				}
-				ip, err = icanhazip.GetPublicIP()
-				if err != nil {
-					return err
-				}
-
-				log.Debug("Updated local resource records and IP address")
-
-				return nil
-			}
-
-			if err := refreshState(); err != nil {
+			dm.RefreshesCacheOnUpdate = true
+			if err := dm.UpdateCache(); err != nil {
 				return err
 			}
 
 			go func() {
 				for range time.Tick(time.Hour) {
-					if err := refreshState(); err != nil {
+					if err := dm.UpdateCache(); err != nil {
 						panic(err)
 					}
 				}
@@ -94,79 +58,22 @@ func watchCommand() *cobra.Command {
 				cache.ResourceEventHandlerFuncs{
 					AddFunc: func(obj interface{}) {
 						ingress := obj.(*networkingv1.Ingress)
-						if !ShouldProcessIngress(ingressClass, ingress) {
-							return
-						}
 
-						record, err := nsdns.NamesiloRecordFromIngress(ingress, domainName, ip)
-						if err != nil {
-							log.Error(err)
-							return
-						}
-
-						existingRecord, _ := RecordMatching(records, *record)
-						if existingRecord != nil {
-							return
-						}
-
-						log.Infof("Adding record for %s", record.Host)
-						if err := api.AddDNSRecord(*record); err != nil {
-							log.Error(err)
-						}
-
-						if err := refreshState(); err != nil {
+						if err := dm.HandleIngressExists(ingress); err != nil {
 							log.Error(err)
 						}
 					},
 					DeleteFunc: func(obj interface{}) {
 						ingress := obj.(*networkingv1.Ingress)
-						if !ShouldProcessIngress(ingressClass, ingress) {
-							return
-						}
 
-						record, err := nsdns.NamesiloRecordFromIngress(ingress, domainName, ip)
-						if err != nil {
-							log.Error(err)
-							return
-						}
-
-						deleteRecord, _ := RecordMatching(records, *record)
-
-						log.Infof("Deleting resource record %s", deleteRecord.RecordId)
-						err = api.DeleteDNSRecord(*deleteRecord)
-						if err != nil {
-							log.Error(err)
-							return
-						}
-
-						if err := refreshState(); err != nil {
+						if err := dm.HandleIngressDeleted(ingress); err != nil {
 							log.Error(err)
 						}
 					},
 					UpdateFunc: func(old, new interface{}) {
 						ingress := new.(*networkingv1.Ingress)
-						if !ShouldProcessIngress(ingressClass, ingress) {
-							return
-						}
 
-						record, err := nsdns.NamesiloRecordFromIngress(ingress, domainName, ip)
-						if err != nil {
-							log.Error(err)
-							return
-						}
-
-						// Only update if something actionable changed.
-						updateRecord, _ := RecordMatching(records, *record)
-						if record.EqualsRecord(*updateRecord) {
-							return
-						}
-
-						log.Infof("Updating record %s", updateRecord.RecordId)
-						if err := api.UpdateDNSRecord(*updateRecord); err != nil {
-							log.Error(err)
-						}
-
-						if err := refreshState(); err != nil {
+						if err := dm.HandleIngressExists(ingress); err != nil {
 							log.Error(err)
 						}
 					},
