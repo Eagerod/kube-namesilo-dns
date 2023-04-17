@@ -15,7 +15,7 @@ import (
 	"github.com/Eagerod/kube-namesilo-dns/pkg/namesilo_api"
 )
 
-type MockNamesiloApi struct{
+type MockNamesiloApi struct {
 	mock.Mock
 }
 
