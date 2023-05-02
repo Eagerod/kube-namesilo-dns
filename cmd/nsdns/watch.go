@@ -41,11 +41,9 @@ func watchCommand() *cobra.Command {
 				return err
 			}
 
+			// Leader will update as soon as it grabs the lease, others can
+			// update their caches on the interval.
 			dm.RefreshesCacheOnUpdate = true
-			if err := dm.UpdateCache(); err != nil {
-				return err
-			}
-
 			go func() {
 				for range time.Tick(time.Hour) {
 					if err := dm.UpdateCache(); err != nil {
@@ -91,6 +89,10 @@ func watchCommand() *cobra.Command {
 					RetryPeriod:     5 * time.Second,
 					Callbacks: leaderelection.LeaderCallbacks{
 						OnStartedLeading: func(ctx context.Context) {
+							if err := dm.UpdateCache(); err != nil {
+								log.Errorf("New leader failed to update cache; assuming registry is down, and local records are up to date")
+							}
+
 							stop = runLoop(informerFactory)
 						},
 						OnStoppedLeading: func() {
