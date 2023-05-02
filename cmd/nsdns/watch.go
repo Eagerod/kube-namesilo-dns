@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -52,37 +53,9 @@ func watchCommand() *cobra.Command {
 				return err
 			}
 
-			informerFactory := informers.NewSharedInformerFactory(clientset, time.Minute)
-
-			informerFactory.Networking().V1().Ingresses().Informer().AddEventHandler(
-				cache.ResourceEventHandlerFuncs{
-					AddFunc: func(obj interface{}) {
-						ingress := obj.(*networkingv1.Ingress)
-
-						if err := dm.HandleIngressExists(ingress); err != nil {
-							log.Error(err)
-						}
-					},
-					DeleteFunc: func(obj interface{}) {
-						ingress := obj.(*networkingv1.Ingress)
-
-						if err := dm.HandleIngressDeleted(ingress); err != nil {
-							log.Error(err)
-						}
-					},
-					UpdateFunc: func(old, new interface{}) {
-						ingress := new.(*networkingv1.Ingress)
-
-						if err := dm.HandleIngressExists(ingress); err != nil {
-							log.Error(err)
-						}
-					},
-				},
-			)
-
-			stop := make(chan struct{})
-			informerFactory.Start(stop)
-			informerFactory.WaitForCacheSync(stop)
+			var stop chan <- struct{}
+			informerFactory := informer(dm, clientset)
+			stop = runLoop(informerFactory)
 
 			sig := make(chan os.Signal, 1)
 			signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
@@ -98,4 +71,43 @@ func watchCommand() *cobra.Command {
 	watchCmd.Flags().StringVarP(&domainName, "domain", "d", "", "domain name for API calls")
 
 	return watchCmd
+}
+
+func informer(dm *nsdns.DnsManager, clientset *kubernetes.Clientset) informers.SharedInformerFactory {
+	informerFactory := informers.NewSharedInformerFactory(clientset, time.Minute)
+
+	informerFactory.Networking().V1().Ingresses().Informer().AddEventHandler(
+		cache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				ingress := obj.(*networkingv1.Ingress)
+
+				if err := dm.HandleIngressExists(ingress); err != nil {
+					log.Error(err)
+				}
+			},
+			DeleteFunc: func(obj interface{}) {
+				ingress := obj.(*networkingv1.Ingress)
+
+				if err := dm.HandleIngressDeleted(ingress); err != nil {
+					log.Error(err)
+				}
+			},
+			UpdateFunc: func(old, new interface{}) {
+				ingress := new.(*networkingv1.Ingress)
+
+				if err := dm.HandleIngressExists(ingress); err != nil {
+					log.Error(err)
+				}
+			},
+		},
+	)
+
+	return informerFactory
+}
+
+func runLoop(informerFactory informers.SharedInformerFactory) chan <- struct{} {
+	stop := make(chan struct{})
+	informerFactory.Start(stop)
+	informerFactory.WaitForCacheSync(stop)
+	return stop
 }
