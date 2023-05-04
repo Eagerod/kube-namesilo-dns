@@ -32,17 +32,6 @@ func watchCommand() *cobra.Command {
 			}
 
 			dm.RefreshesCacheOnUpdate = true
-			if err := dm.UpdateCache(); err != nil {
-				return err
-			}
-
-			go func() {
-				for range time.Tick(time.Hour) {
-					if err := dm.UpdateCache(); err != nil {
-						panic(err)
-					}
-				}
-			}()
 
 			clientset, err := GetKubernetesClientSet()
 			if err != nil {
@@ -50,6 +39,26 @@ func watchCommand() *cobra.Command {
 			}
 
 			informerFactory := DomainManagerInformerFactory(dm, clientset)
+
+			// Before starting the informer, start up a loop to update caches
+			// safely.
+			done := make(chan struct{})
+			go func() {
+				for err := dm.UpdateCache(); err != nil; {
+					log.Error("Initial cache update failed. Retrying in 5 minutes...")
+					time.Sleep(5 * time.Minute)
+				}
+				done <- struct{}{}
+
+				log.Info("Initial cache update complete. Moving to hourly updates...")
+				for range time.Tick(time.Hour) {
+					if err := dm.UpdateCache(); err != nil {
+						panic(err)
+					}
+				}
+			}()
+
+			<-done
 
 			stop := make(chan struct{})
 			informerFactory.Start(stop)
