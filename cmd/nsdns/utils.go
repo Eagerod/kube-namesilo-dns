@@ -5,7 +5,6 @@ import (
 	"errors"
 	"os"
 	"path"
-	"time"
 )
 
 import (
@@ -13,16 +12,10 @@ import (
 	apinetworkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
-)
-
-import (
-	"github.com/Eagerod/kube-namesilo-dns/pkg/nsdns"
 )
 
 func GetIngresses(namespace string) ([]apinetworkingv1.Ingress, error) {
@@ -62,36 +55,4 @@ func GetKubernetesClientSet() (*kubernetes.Clientset, error) {
 	}
 
 	return nil, errors.New("failed to configure Kubernetes client")
-}
-
-func DomainManagerInformerFactory(dm *nsdns.DnsManager, clientset *kubernetes.Clientset) informers.SharedInformerFactory {
-	informerFactory := informers.NewSharedInformerFactory(clientset, time.Minute)
-
-	informerFactory.Networking().V1().Ingresses().Informer().AddEventHandler(
-		cache.ResourceEventHandlerFuncs{
-			AddFunc: func(obj interface{}) {
-				ingress := obj.(*apinetworkingv1.Ingress)
-
-				if err := dm.HandleIngressExists(ingress); err != nil {
-					log.Error(err)
-				}
-			},
-			DeleteFunc: func(obj interface{}) {
-				ingress := obj.(*apinetworkingv1.Ingress)
-
-				if err := dm.HandleIngressDeleted(ingress); err != nil {
-					log.Error(err)
-				}
-			},
-			UpdateFunc: func(old, new interface{}) {
-				ingress := new.(*apinetworkingv1.Ingress)
-
-				if err := dm.HandleIngressExists(ingress); err != nil {
-					log.Error(err)
-				}
-			},
-		},
-	)
-
-	return informerFactory
 }
