@@ -21,6 +21,10 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
+import (
+	"github.com/Eagerod/kube-namesilo-dns/pkg/nsdns"
+)
+
 func GetIngresses(namespace string) ([]apinetworkingv1.Ingress, error) {
 	rv := []apinetworkingv1.Ingress{}
 

@@ -38,8 +38,6 @@ func watchCommand() *cobra.Command {
 				return err
 			}
 
-			informerFactory := DomainManagerInformerFactory(dm, clientset)
-
 			// Before starting the informer, start up a loop to update caches
 			// safely.
 			done := make(chan struct{})
@@ -51,12 +49,16 @@ func watchCommand() *cobra.Command {
 				done <- struct{}{}
 
 				log.Info("Initial cache update complete. Moving to hourly updates...")
-				for range time.Tick(time.Hour) {
-					if err := dm.UpdateCache(); err != nil {
-						panic(err)
+				for {
+					time.Sleep(1 * time.Hour)
+					for err := dm.UpdateCache(); err != nil; {
+						log.Error("Hourly cache update failed. Retrying in 5 minutes...")
+						time.Sleep(5 * time.Minute)
 					}
 				}
 			}()
+
+			informerFactory := DomainManagerInformerFactory(dm, clientset)
 
 			<-done
 
