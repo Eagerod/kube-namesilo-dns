@@ -42,7 +42,7 @@ func watchCommand() *cobra.Command {
 			}
 
 			for err := dm.UpdateCache(); err != nil; {
-				log.Error("Initial cache update failed. Retrying in 5 minutes...")
+				log.Errorf("Initial cache update failed with %s. Retrying in 5 minutes...", err.Error())
 				time.Sleep(5 * time.Minute)
 			}
 
@@ -51,7 +51,7 @@ func watchCommand() *cobra.Command {
 				for {
 					time.Sleep(1 * time.Hour)
 					for err := dm.UpdateCache(); err != nil; {
-						log.Error("Hourly cache update failed. Retrying in 5 minutes...")
+						log.Errorf("Hourly cache update failed with %s. Retrying in 5 minutes...", err.Error())
 						time.Sleep(5 * time.Minute)
 					}
 				}
