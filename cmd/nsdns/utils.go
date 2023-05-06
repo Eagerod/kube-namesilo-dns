@@ -21,17 +21,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-import (
-	"github.com/Eagerod/kube-namesilo-dns/pkg/namesilo_api"
-	"github.com/Eagerod/kube-namesilo-dns/pkg/nsdns"
-)
-
-type RecordReconciliation struct {
-	Add    []namesilo_api.ResourceRecord
-	Update []namesilo_api.ResourceRecord
-	NoOp   []namesilo_api.ResourceRecord
-}
-
 func GetIngresses(namespace string) ([]apinetworkingv1.Ingress, error) {
 	rv := []apinetworkingv1.Ingress{}
 
