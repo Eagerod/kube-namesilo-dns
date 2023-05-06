@@ -10,7 +10,7 @@ import (
 import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	networkingv1 "k8s.io/api/networking/v1"
+	apinetworkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 )
@@ -35,43 +35,48 @@ func watchCommand() *cobra.Command {
 			}
 
 			dm.RefreshesCacheOnUpdate = true
-			if err := dm.UpdateCache(); err != nil {
-				return err
-			}
-
-			go func() {
-				for range time.Tick(time.Hour) {
-					if err := dm.UpdateCache(); err != nil {
-						panic(err)
-					}
-				}
-			}()
 
 			clientset, err := GetKubernetesClientSet()
 			if err != nil {
 				return err
 			}
 
+			for err := dm.UpdateCache(); err != nil; {
+				log.Errorf("Initial cache update failed with %s. Retrying in 5 minutes...", err.Error())
+				time.Sleep(5 * time.Minute)
+			}
+
+			go func() {
+				log.Info("Initial cache update complete. Moving to hourly updates...")
+				for {
+					time.Sleep(1 * time.Hour)
+					for err := dm.UpdateCache(); err != nil; {
+						log.Errorf("Hourly cache update failed with %s. Retrying in 5 minutes...", err.Error())
+						time.Sleep(5 * time.Minute)
+					}
+				}
+			}()
+
 			informerFactory := informers.NewSharedInformerFactory(clientset, time.Minute)
 
 			informerFactory.Networking().V1().Ingresses().Informer().AddEventHandler(
 				cache.ResourceEventHandlerFuncs{
 					AddFunc: func(obj interface{}) {
-						ingress := obj.(*networkingv1.Ingress)
+						ingress := obj.(*apinetworkingv1.Ingress)
 
 						if err := dm.HandleIngressExists(ingress); err != nil {
 							log.Error(err)
 						}
 					},
 					DeleteFunc: func(obj interface{}) {
-						ingress := obj.(*networkingv1.Ingress)
+						ingress := obj.(*apinetworkingv1.Ingress)
 
 						if err := dm.HandleIngressDeleted(ingress); err != nil {
 							log.Error(err)
 						}
 					},
 					UpdateFunc: func(old, new interface{}) {
-						ingress := new.(*networkingv1.Ingress)
+						ingress := new.(*apinetworkingv1.Ingress)
 
 						if err := dm.HandleIngressExists(ingress); err != nil {
 							log.Error(err)
