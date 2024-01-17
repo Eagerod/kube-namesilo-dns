@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const DefaultApiURLPrefix string = "https://www.namesilo.com/api/"
+const DefaultApiURLPrefix string = "https://www.namesilo.com/api"
 
 type NamesiloApi interface {
 	ListDNSRecords() ([]ResourceRecord, error)
